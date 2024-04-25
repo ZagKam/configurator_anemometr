@@ -2,7 +2,7 @@ import serial
 import struct
 import time
 
-def entry_oporn_signal(ComPort:serial.Serial) -> int:
+def entry_oporn_signal(ComPort:serial.Serial) -> bool:
     """
     Функция для записи опорных сигналов.
         
