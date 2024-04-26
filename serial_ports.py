@@ -1,6 +1,6 @@
-from serial import Serial, SerialException
+from serial import SerialException
 
-from fakeserial import TestSerial as Serial
+from serialport import Serial
 
 from typing import List
 
@@ -22,6 +22,8 @@ def serial_ports() -> List[str]:
         except (OSError, SerialException):
             pass
     return list_of_ports
+
+
 
 
 if __name__ == "__main__":

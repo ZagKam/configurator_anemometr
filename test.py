@@ -50,26 +50,56 @@
 # for number in raw_answer[1:3]:
 #     hex_answer += format(number, '02X')
 # print(int(hex_answer, 16))
-import tkinter as tk
+# import tkinter as tk
 
-def display_text():
-    text = entry.get()
-    output_text.config(state=tk.NORMAL)
-    output_text.delete("1.0", tk.END)
-    output_text.insert(tk.END, text)
-    output_text.config(state=tk.DISABLED)
+# def display_text():
+#     text = entry.get()
+#     output_text.config(state=tk.NORMAL)
+#     output_text.delete("1.0", tk.END)
+#     output_text.insert(tk.END, text)
+#     output_text.config(state=tk.DISABLED)
+
+# root = tk.Tk()
+# root.title("Пример поля вывода")
+
+# entry = tk.Entry(root)
+# entry.grid(row=0, column=0, padx=10, pady=10)
+
+# display_button = tk.Button(root, text="Показать текст", command=display_text)
+# display_button.grid(row=0, column=1, padx=10, pady=10)
+
+# output_text = tk.Text(root, height=10, width=40)
+# output_text.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
+
+# root.mainloop()
+
+import tkinter as tk
+from tkinter import ttk
+
+def create_tooltip(widget, text):
+    widget.bind("<Enter>", lambda event: show_tooltip(text))
+    widget.bind("<Leave>", lambda event: hide_tooltip())
+
+def show_tooltip(text):
+    tooltip_label.config(text=text)
+    tooltip_label.place(relx=0.5, rely=0.5, anchor="center")
+
+def hide_tooltip():
+    tooltip_label.place_forget()
 
 root = tk.Tk()
-root.title("Пример поля вывода")
 
-entry = tk.Entry(root)
-entry.grid(row=0, column=0, padx=10, pady=10)
+entry_b_m_frame = tk.Frame(root)
+entry_b_m_frame.pack()
 
-display_button = tk.Button(root, text="Показать текст", command=display_text)
-display_button.grid(row=0, column=1, padx=10, pady=10)
+output_m_b_text = tk.Text(entry_b_m_frame)
+output_m_b_text.configure(width=15, height=1)
+output_m_b_text.grid(row=1, column=2, padx=20, pady=1)
 
-output_text = tk.Text(root, height=10, width=40)
-output_text.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
+tooltip_label = ttk.Label(root, background="#ffffe0", relief="solid", borderwidth=1, wraplength=150)
+tooltip_label.pack(ipadx=2, ipady=2, padx=10, pady=5)
+tooltip_label.config(font=("Helvetica", "8"))
+
+create_tooltip(output_m_b_text, "Это поле вывода с подсказкой")
 
 root.mainloop()
-
