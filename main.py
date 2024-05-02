@@ -6,7 +6,7 @@ from get_version import get_version
 from serialport import Serial
 import threading
 import numpy as np
-
+import serial
 
 class Mutton(ttk.Button):
     ...
@@ -16,12 +16,14 @@ class Mutton(ttk.Button):
 PORTS = {'port_1':None,
              'port_2':None}
 
-def open_ports_click(name_1:str, name_2:str, *args):
-    PORTS["port_1"] = Serial(name_1,baudrate = 19200, bytesize = 8)
-    PORTS["port_2"] = Serial(name_2,baudrate = 19200, bytesize = 8)
-
-
-
+def open_ports_click(name_1:str):
+    try:
+        ComPort = serial.Serial(name_1, timeout=1)
+        ComPort.baudrate = 19200
+        return ComPort
+    except serial.SerialException:
+        print(f"Не удалось открыть порт COM: {name_1}. Проверьте подключение.")
+        COMport = None
 
 # def on_entry_click(event, entry_widget, default_text):
 #     if entry_widget.get() == default_text:
@@ -110,167 +112,158 @@ def check_state():
 
 # Создание главного окна
 
+class ComportFrame(ttk.Frame):
+    
+    ...
+
 
 class TkApp(tk.Tk):
         
-    root = tk.Tk()
-    root.title("Анемометр УЗ")
+    def __init__(self):
+        super().__init__()
+        
+        self.title("Анемометр УЗ")
 
-    # Установка размеров окна
-    root.geometry("900x300")  # Ширина x Высота
-
-
-    ################################
-
-
-
-    # Создаем рамку для содержания выбора и подключения COMport
-    comport_frame = tk.Frame(root)
-    comport_frame.grid(row=0, column=0, padx=10, pady=5, sticky='w')
-
-    # Создаем рамку для содержания команды записи m и b
-    entry_b_m_frame = tk.Frame(root)
-    entry_b_m_frame.grid(row=1, column=0, padx=10, pady=0, sticky='w')
-
-    # Создаем рамку для цикла записи скорости под разными углами (0,5,10,15)
-    velocity_angle_loop_frame = tk.Frame(root)
-    velocity_angle_loop_frame.grid(row=2, column=0, padx=10, pady=0, sticky='w')
-
-    # Создаем рамку для записи определенного угла и скорости
-    velocity_angle_const_frame = tk.Frame(root)
-    velocity_angle_const_frame.grid(row=3, column=0, padx=10, pady=0, sticky='w')
-
-    # Создаем рамку для записи опорных сигналов
-    oporn_signal_frame = tk.Frame(root)
-    oporn_signal_frame.grid(row=4, column=0, padx=10, pady=0, sticky='w')
+        # Установка размеров окна
+        self.geometry("900x300")  # Ширина x Высота
+        
+        self.comport_frame = tk.Frame(self)
+        self.entry_b_m_frame = tk.Frame(self)
+        self.velocity_angle_loop_frame = tk.Frame(self)
+        self.velocity_angle_const_frame = tk.Frame(self)
+        self.oporn_signal_frame = tk.Frame(self)
 
 
-    #################################
+
+    def label_naming(self):
+
+        # Создаем метку для надписи над окном вывода
+        comport_title_label = tk.Label(comport_frame)
+
+        # Создаем метку для надписи над окном вывода
+        entry_b_m_title_label = tk.Label(entry_b_m_frame)
+
+        # Создаем метку для надписи над окном вывода
+        velocity_angle_loop_title_label = tk.Label(velocity_angle_loop_frame)
+
+        # Создаем метку для надписи над окном вывода
+        velocity_angle_const_title_label = tk.Label(velocity_angle_const_frame)
+
+        # Создаем метку для надписи над окном вывода
+        oporn_signal_title_label = tk.Label(oporn_signal_frame)
 
 
-    # Создаем метку для надписи над окном вывода
-    comport_title_label = tk.Label(comport_frame)
-    comport_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+    def build(self):
 
-    # Создаем метку для надписи над окном вывода
-    entry_b_m_title_label = tk.Label(entry_b_m_frame)
-    entry_b_m_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+        # Создание Combobox
+        values = serial_ports()
+        combo1 = ttk.Combobox(comport_frame, values=values, width=22)
 
-    # Создаем метку для надписи над окном вывода
-    velocity_angle_loop_title_label = tk.Label(velocity_angle_loop_frame)
-    velocity_angle_loop_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+        combo1.set("Выберите COMport №1")
 
-    # Создаем метку для надписи над окном вывода
-    velocity_angle_const_title_label = tk.Label(velocity_angle_const_frame)
-    velocity_angle_const_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+        # # Создание Combobox
+        # values = serial_ports()
+        # combo2 = ttk.Combobox(comport_frame, values=values, width=22)
 
-    # Создаем метку для надписи над окном вывода
-    oporn_signal_title_label = tk.Label(oporn_signal_frame)
-    oporn_signal_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+        # combo2.set("Выберите COMport №2")
+
+        # Создание кнопки и размещение с помощью grid
+        button_open_port = Mutton(comport_frame, text="Открыть порты", command=lambda: open_ports_click(combo1.get()))
 
 
-    ###################################
+        # Создание кнопки и размещение с помощью grid
+        button_close_port = Mutton(comport_frame, text="Закрыть порты", command=show_message)
 
 
-    # Создание Combobox
-    values = serial_ports()
-    combo1 = ttk.Combobox(comport_frame, values=values, width=22)
+        # Создание окна вывода версии
+        info_label = tk.Label(root, text=f"dvdvvd")
+        
+        #vers()
 
-    combo1.set("Выберите COMport №1")
+        ##############################
 
-    # Создание Combobox
-    values = serial_ports()
-    combo2 = ttk.Combobox(comport_frame, values=values, width=22)
-
-    combo2.set("Выберите COMport №2")
-
-    # Создание кнопки и размещение с помощью grid
-    button_open_port = Mutton(comport_frame, text="Открыть порты", command=lambda event: open_ports_click(combo1.get(), combo2.get()))
+        # Кнопка для начала записи
+        input_m_b_button = Mutton(entry_b_m_frame, text="Запись", command=get_input)
 
 
-    # Создание кнопки и размещение с помощью grid
-    button_close_port = Mutton(comport_frame, text="Закрыть порты", command=show_message)
+        # Создание поля ввода и размещение с помощью grid
+        default_text = 'Введите m'
+        entry_m_b = EntryWithPlaceholder(entry_b_m_frame, placeholder=default_text)
 
 
-    # Создание окна вывода версии
-    info_label = tk.Label(root, text=f"")
-    
-    vers()
-
-    ##############################
-
-    # Кнопка для начала записи
-    input_m_b_button = Mutton(entry_b_m_frame, text="Запись", command=vers())
+        # окно вывода b
+        output_m_b_text = tk.Text(entry_b_m_frame)
+        output_m_b_text.configure(width=15, height=1)
 
 
-    # Создание поля ввода и размещение с помощью grid
-    default_text = 'Введите m'
-    entry_m_b = EntryWithPlaceholder(entry_b_m_frame, placeholder=default_text)
+        tooltip_label = ttk.Label(root, background="#ffffe0", relief="solid", borderwidth=1, wraplength=150)
+        #tooltip_label.pack(ipadx=2, ipady=2, padx=10, pady=5)
+        tooltip_label.config(font=("Helvetica", "8"))
+        create_tooltip(output_m_b_text, "Отображение параметра b")
+
+        ##################################
+
+        # Кнопка для начала записи
+        velocity_angle_loop_button = Mutton(velocity_angle_loop_frame, text="Начать цикл", command=get_input)
 
 
-    # окно вывода b
-    output_m_b_text = tk.Text(entry_b_m_frame)
-    output_m_b_text.configure(width=15, height=1)
+        # Создание поля ввода скорости для цикла
+        default_text = 'Введите скорость'
+        entry_velocity_angle = EntryWithPlaceholder(velocity_angle_loop_frame, placeholder=default_text)
+
+        ##################################
+
+        # Кнопка для определения значений определенной скороти и угла
+        velocity_angle_const_button = Mutton(velocity_angle_const_frame, text="Найти", command=get_input)
 
 
-    tooltip_label = ttk.Label(root, background="#ffffe0", relief="solid", borderwidth=1, wraplength=150)
-    #tooltip_label.pack(ipadx=2, ipady=2, padx=10, pady=5)
-    tooltip_label.config(font=("Helvetica", "8"))
-    create_tooltip(output_m_b_text, "Отображение параметра b")
-
-    ##################################
-
-    # Кнопка для начала записи
-    velocity_angle_loop_button = Mutton(velocity_angle_loop_frame, text="Начать цикл", command=get_input)
+        # Создание поля ввода скорости для определения одного значения
+        default_text = 'Введите скорость'
+        entry_velocity_const = EntryWithPlaceholder(velocity_angle_const_frame, placeholder=default_text)
 
 
-    # Создание поля ввода скорости для цикла
-    default_text = 'Введите скорость'
-    entry_velocity_angle = EntryWithPlaceholder(velocity_angle_loop_frame, placeholder=default_text)
-
-    ##################################
-
-    # Кнопка для определения значений определенной скороти и угла
-    velocity_angle_const_button = Mutton(velocity_angle_const_frame, text="Найти", command=get_input)
+        # Создание поля ввода угла для определения одного значения
+        default_text = 'Введите угол'
+        entry_angle_const = EntryWithPlaceholder(velocity_angle_const_frame, placeholder=default_text)
 
 
-    # Создание поля ввода скорости для определения одного значения
-    default_text = 'Введите скорость'
-    entry_velocity_const = EntryWithPlaceholder(velocity_angle_const_frame, placeholder=default_text)
+        ##################################
+
+        # Кнопка для команды на запись опорных сигналов
+        oporn_signal_button = Mutton(oporn_signal_frame, text="Запись опорных сигналов", command=get_input)
 
 
-    # Создание поля ввода угла для определения одного значения
-    default_text = 'Введите угол'
-    entry_angle_const = EntryWithPlaceholder(velocity_angle_const_frame, placeholder=default_text)
+        # Создание окна для оповещения о завершении процесса записи опорных векторов
+        info_label = tk.Label(oporn_signal_frame, text=f"здесь будет оповещение о завершении записи")
 
 
-    ##################################
+        ##################################
 
-    # Кнопка для команды на запись опорных сигналов
-    oporn_signal_button = Mutton(oporn_signal_frame, text="Запись опорных сигналов", command=get_input)
-
-
-    # Создание окна для оповещения о завершении процесса записи опорных векторов
-    info_label = tk.Label(oporn_signal_frame, text=f"здесь будет оповещение о завершении записи")
-
-
-    ##################################
-
-    combo1.grid(row=0, column=0, padx=10, pady=10)
-    combo2.grid(row=0, column=1, padx=10, pady=10)
-    button_open_port.grid(row=0, column=2, padx=10, pady=10)
-    button_close_port.grid(row=0, column=3, padx=10, pady=10)
-    info_label.grid(row=0, column=4, padx=10, pady=10)
-    input_m_b_button.grid(row=1, column=0, padx=10, pady=1)
-    entry_m_b.grid(row=1, column=1)
-    output_m_b_text.grid(row=1, column=2, padx=20, pady=1)
-    velocity_angle_loop_button.grid(row=1, column=0, padx=10, pady=1)
-    entry_velocity_angle.grid(row=1, column=1)
-    velocity_angle_const_button.grid(row=1, column=0, padx=10, pady=1)
-    entry_velocity_const.grid(row=1, column=1)
-    entry_angle_const.grid(row=1, column=2, padx=20, pady=1)
-    oporn_signal_button.grid(row=1, column=0, padx=10, pady=1)
-    info_label.grid(row=1, column=1, padx=10, pady=10)  
+        comport_frame.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+        entry_b_m_frame.grid(row=1, column=0, padx=10, pady=0, sticky='w')
+        velocity_angle_loop_frame.grid(row=2, column=0, padx=10, pady=0, sticky='w')
+        velocity_angle_const_frame.grid(row=3, column=0, padx=10, pady=0, sticky='w')
+        oporn_signal_frame.grid(row=4, column=0, padx=10, pady=0, sticky='w')
+        comport_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+        entry_b_m_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+        velocity_angle_loop_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+        velocity_angle_const_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+        oporn_signal_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+        combo1.grid(row=0, column=0, padx=10, pady=10)
+        combo2.grid(row=0, column=1, padx=10, pady=10)
+        button_open_port.grid(row=0, column=2, padx=10, pady=10)
+        button_close_port.grid(row=0, column=3, padx=10, pady=10)
+        info_label.grid(row=0, column=4, padx=10, pady=10)
+        input_m_b_button.grid(row=1, column=0, padx=10, pady=1)
+        entry_m_b.grid(row=1, column=1)
+        output_m_b_text.grid(row=1, column=2, padx=20, pady=1)
+        velocity_angle_loop_button.grid(row=1, column=0, padx=10, pady=1)
+        entry_velocity_angle.grid(row=1, column=1)
+        velocity_angle_const_button.grid(row=1, column=0, padx=10, pady=1)
+        entry_velocity_const.grid(row=1, column=1)
+        entry_angle_const.grid(row=1, column=2, padx=20, pady=1)
+        oporn_signal_button.grid(row=1, column=0, padx=10, pady=1)
+        info_label.grid(row=1, column=1, padx=10, pady=10)   
 root = tk.Tk()
 root.title("Анемометр УЗ")
 
@@ -284,23 +277,23 @@ root.geometry("900x300")  # Ширина x Высота
 
 # Создаем рамку для содержания выбора и подключения COMport
 comport_frame = tk.Frame(root)
-comport_frame.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+
 
 # Создаем рамку для содержания команды записи m и b
 entry_b_m_frame = tk.Frame(root)
-entry_b_m_frame.grid(row=1, column=0, padx=10, pady=0, sticky='w')
+
 
 # Создаем рамку для цикла записи скорости под разными углами (0,5,10,15)
 velocity_angle_loop_frame = tk.Frame(root)
-velocity_angle_loop_frame.grid(row=2, column=0, padx=10, pady=0, sticky='w')
+
 
 # Создаем рамку для записи определенного угла и скорости
 velocity_angle_const_frame = tk.Frame(root)
-velocity_angle_const_frame.grid(row=3, column=0, padx=10, pady=0, sticky='w')
+
 
 # Создаем рамку для записи опорных сигналов
 oporn_signal_frame = tk.Frame(root)
-oporn_signal_frame.grid(row=4, column=0, padx=10, pady=0, sticky='w')
+
 
 
 #################################
@@ -308,23 +301,23 @@ oporn_signal_frame.grid(row=4, column=0, padx=10, pady=0, sticky='w')
 
 # Создаем метку для надписи над окном вывода
 comport_title_label = tk.Label(comport_frame)
-comport_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+
 
 # Создаем метку для надписи над окном вывода
 entry_b_m_title_label = tk.Label(entry_b_m_frame)
-entry_b_m_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+
 
 # Создаем метку для надписи над окном вывода
 velocity_angle_loop_title_label = tk.Label(velocity_angle_loop_frame)
-velocity_angle_loop_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+
 
 # Создаем метку для надписи над окном вывода
 velocity_angle_const_title_label = tk.Label(velocity_angle_const_frame)
-velocity_angle_const_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+
 
 # Создаем метку для надписи над окном вывода
 oporn_signal_title_label = tk.Label(oporn_signal_frame)
-oporn_signal_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+
 
 
 ###################################
@@ -343,7 +336,7 @@ combo2 = ttk.Combobox(comport_frame, values=values, width=22)
 combo2.set("Выберите COMport №2")
 
 # Создание кнопки и размещение с помощью grid
-button_open_port = Mutton(comport_frame, text="Открыть порты", command=lambda event: open_ports_click(combo1.get(), combo2.get()))
+button_open_port = Mutton(comport_frame, text="Открыть порты", command=lambda: print(get_version(open_ports_click(combo1.get()))))
 
 
 # Создание кнопки и размещение с помощью grid
@@ -351,14 +344,14 @@ button_close_port = Mutton(comport_frame, text="Закрыть порты", comm
 
 
 # Создание окна вывода версии
-info_label = tk.Label(root, text=f"")
+info_label = tk.Label(comport_frame, text=f"dffb")
   
-vers()
+
 
 ##############################
 
 # Кнопка для начала записи
-input_m_b_button = Mutton(entry_b_m_frame, text="Запись", command=vers())
+input_m_b_button = Mutton(entry_b_m_frame, text="Запись", command=get_input)
 
 
 # Создание поля ввода и размещение с помощью grid
@@ -409,16 +402,27 @@ oporn_signal_button = Mutton(oporn_signal_frame, text="Запись опорны
 
 
 # Создание окна для оповещения о завершении процесса записи опорных векторов
-info_label = tk.Label(oporn_signal_frame, text=f"здесь будет оповещение о завершении записи")
+end_write_oporn = tk.Label(oporn_signal_frame, text=f"здесь будет оповещение о завершении записи")
 
 
 ##################################
 
+
+comport_frame.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+entry_b_m_frame.grid(row=1, column=0, padx=10, pady=0, sticky='w')
+velocity_angle_loop_frame.grid(row=2, column=0, padx=10, pady=0, sticky='w')
+velocity_angle_const_frame.grid(row=3, column=0, padx=10, pady=0, sticky='w')
+oporn_signal_frame.grid(row=4, column=0, padx=10, pady=0, sticky='w')
+comport_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+entry_b_m_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+velocity_angle_loop_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+velocity_angle_const_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
+oporn_signal_title_label.grid(row=0, column=0, padx=10, pady=(0, 5))
 combo1.grid(row=0, column=0, padx=10, pady=10)
 combo2.grid(row=0, column=1, padx=10, pady=10)
 button_open_port.grid(row=0, column=2, padx=10, pady=10)
 button_close_port.grid(row=0, column=3, padx=10, pady=10)
-info_label.grid(row=0, column=4, padx=10, pady=10)
+info_label.grid(row=0, column=4, padx=0, pady=0)
 input_m_b_button.grid(row=1, column=0, padx=10, pady=1)
 entry_m_b.grid(row=1, column=1)
 output_m_b_text.grid(row=1, column=2, padx=20, pady=1)

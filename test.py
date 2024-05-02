@@ -73,42 +73,53 @@
 
 # root.mainloop()
 
-import tkinter as tk
-from tkinter import ttk
+# import tkinter as tk
+# from tkinter import ttk
 
-def create_tooltip(widget, text):
-    widget.bind("<Enter>", lambda event: show_tooltip(text))
-    widget.bind("<Leave>", lambda event: hide_tooltip())
+# def create_tooltip(widget, text):
+#     widget.bind("<Enter>", lambda event: show_tooltip(text))
+#     widget.bind("<Leave>", lambda event: hide_tooltip())
 
-def show_tooltip(text):
-    tooltip_label.config(text=text)
-    tooltip_label.place(relx=0.5, rely=0.5, anchor="center")
+# def show_tooltip(text):
+#     tooltip_label.config(text=text)
+#     tooltip_label.place(relx=0.5, rely=0.5, anchor="center")
 
-def hide_tooltip():
-    tooltip_label.place_forget()
+# def hide_tooltip():
+#     tooltip_label.place_forget()
 
-root = tk.Tk()
+# root = tk.Tk()
 
-entry_b_m_frame = tk.Frame(root)
-entry_b_m_frame.pack()
+# entry_b_m_frame = tk.Frame(root)
+# entry_b_m_frame.pack()
 
-output_m_b_text = tk.Text(entry_b_m_frame)
-output_m_b_text.configure(width=15, height=1)
-output_m_b_text.grid(row=1, column=2, padx=20, pady=1)
+# output_m_b_text = tk.Text(entry_b_m_frame)
+# output_m_b_text.configure(width=15, height=1)
+# output_m_b_text.grid(row=1, column=2, padx=20, pady=1)
 
-tooltip_label = ttk.Label(root, background="#ffffe0", relief="solid", borderwidth=1, wraplength=150)
-tooltip_label.pack(ipadx=2, ipady=2, padx=10, pady=5)
-tooltip_label.config(font=("Helvetica", "8"))
+# tooltip_label = ttk.Label(root, background="#ffffe0", relief="solid", borderwidth=1, wraplength=150)
+# tooltip_label.pack(ipadx=2, ipady=2, padx=10, pady=5)
+# tooltip_label.config(font=("Helvetica", "8"))
 
-create_tooltip(output_m_b_text, "Это поле вывода с подсказкой")
+# create_tooltip(output_m_b_text, "Это поле вывода с подсказкой")
 
-root.mainloop()
+# root.mainloop()
 
+import time
+import serial
 
+try:
+    ComPort = serial.Serial('COM4', baudrate=19200)
+    print("Успешно открыт COM порт")
 
+    while True:
+        byte_request = b'\x3C\x03\x00\x01\x00\x02\x91\x26' 
+        ComPort.write(byte_request)
+        answer = list(ComPort.read(9))
+        print("Получен ответ:", answer)
+        time.sleep(1) 
 
-
-
-
-
+except KeyboardInterrupt:
+    # Закрываем COM порт при прерывании программы
+    ComPort.close()
+    print("Программа завершена")
 

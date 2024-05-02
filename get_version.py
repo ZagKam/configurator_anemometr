@@ -14,7 +14,7 @@ def get_version(ComPort:serial.Serial) -> int:
     """
     byte_request = b'\x3C\x03\x00\x01\x00\x02\x91\x26' 
     ComPort.write(byte_request)
-    answer = list(ComPort.read(11))
+    answer = list(ComPort.read(9))
     time.sleep(0.25) 
     try:
         if answer[5] == 0:

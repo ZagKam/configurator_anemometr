@@ -1,9 +1,6 @@
-from serial import SerialException
-
-from serialport import Serial
-
+import serial
 from typing import List
-
+from serial import SerialException
 
 def serial_ports() -> List[str]:
     """
@@ -16,12 +13,13 @@ def serial_ports() -> List[str]:
     list_of_ports = []
     for port in ports:
         try:
-            s = Serial(port)
+            s = serial.Serial(port)
             s.close()
             list_of_ports.append(port)
-        except (OSError, SerialException):
+        except (OSError, serial.SerialException):
             pass
     return list_of_ports
+
 
 
 
