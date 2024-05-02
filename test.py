@@ -103,3 +103,12 @@ tooltip_label.config(font=("Helvetica", "8"))
 create_tooltip(output_m_b_text, "Это поле вывода с подсказкой")
 
 root.mainloop()
+
+
+
+
+
+
+
+
+

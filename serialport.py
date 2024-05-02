@@ -20,7 +20,7 @@ class Serial(Mock):
 #from serial import Serial
 
 if __name__ == '__main__':
-    ser = TestSerial()
+    ser = Serial()
     ser.open()
     ser.open("motherfucker")
     ser.fungorn.close()
