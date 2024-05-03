@@ -17,6 +17,9 @@ def get_version(ComPort:serial.Serial) -> int:
     answer = list(ComPort.read(9))
     time.sleep(0.25) 
     try:
+        if not answer:
+            print('No answer on', ComPort)
+            return -1
         if answer[5] == 0:
             return answer[6]
         else:

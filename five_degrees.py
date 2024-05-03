@@ -2,16 +2,18 @@ import serial
 import struct
 import time
 
-def entry_oporn_signal(ComPort:serial.Serial) -> bool:
+def rotation_five_degree(ComPort:serial.Serial) -> bool:
     """
     Функция для записи опорных сигналов.
         
     Аргументы:
         - ComPort: seiralSerial класс бибилеотки serial для подключения к плате;
     Возвращает: 
-        - bool: когда приходит ответ, функция вернет True.
+        - bool: когда приходит ответ, функция вернет True
+        
+        ПРМЕЧАНИЕ: Эта функция с шаговым двигателем
     """
-    byte_request = b'\x3C\x06\x00\x00\x00\x00\x8D\x27' 
+    byte_request = b'\x01\x10\x00\x1A\x00\x02\x04\x00\xB2\x00\x00\xD2\xFB' 
     ComPort.write(byte_request) 
     answer = list(ComPort.read(8))
     
@@ -22,5 +24,3 @@ def entry_oporn_signal(ComPort:serial.Serial) -> bool:
         except Exception as e:
             print(e)
     return True
-    
-    

@@ -104,22 +104,42 @@
 
 # root.mainloop()
 
-import time
-import serial
+# import time
+# import serial
 
-try:
-    ComPort = serial.Serial('COM4', baudrate=19200)
-    print("Успешно открыт COM порт")
+# try:
+#     ComPort = serial.Serial('COM4', baudrate=19200)
+#     print("Успешно открыт COM порт")
 
-    while True:
-        byte_request = b'\x3C\x03\x00\x01\x00\x02\x91\x26' 
-        ComPort.write(byte_request)
-        answer = list(ComPort.read(9))
-        print("Получен ответ:", answer)
-        time.sleep(1) 
+#     while True:
+#         byte_request = b'\x3C\x03\x00\x01\x00\x02\x91\x26' 
+#         ComPort.write(byte_request)
+#         answer = list(ComPort.read(9))
+#         print("Получен ответ:", answer)
+#         time.sleep(1) 
 
-except KeyboardInterrupt:
-    # Закрываем COM порт при прерывании программы
-    ComPort.close()
-    print("Программа завершена")
+# except KeyboardInterrupt:
+#     # Закрываем COM порт при прерывании программы
+#     ComPort.close()
+#     print("Программа завершена")
 
+# import tkinter as tk
+
+# root = tk.Tk()
+# root.title("Пример")
+
+# parameters_frame = tk.Frame(root)
+# parameters_frame.pack()
+
+# label = tk.Label(parameters_frame, text="Метка:")
+# label.pack()
+
+# parameters_m12_text = tk.Text(parameters_frame)
+# parameters_m12_text.configure(width=15, height=1)
+# parameters_m12_text.pack()
+
+# root.mainloop()
+
+data = b'\xff\xe5'
+degrees = int.from_bytes(data, byteorder='big', signed=True)
+print(degrees)
