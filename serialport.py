@@ -1,5 +1,7 @@
 from unittest.mock import Mock
+from threading import Lock
 from time import sleep
+import serial
 
 class Serial(Mock):
     
@@ -16,6 +18,17 @@ class Serial(Mock):
     def write(self, command: bytes,  *args, **kwargs):
         self.command = command
 
+class Serial(serial.Serial):
+    
+    mutex = Lock()
+    
+    def interact(self, *args, read_size=0, **kwargs):
+        with self.mutex:
+            super().write(*args, **kwargs)
+            
+            if read_size:
+                return super().read(read_size)
+            super().read_all()
 
 #from serial import Serial
 

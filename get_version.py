@@ -13,8 +13,7 @@ def get_version(ComPort:serial.Serial) -> int:
         - str версию газоанализатора.
     """
     byte_request = b'\x3C\x03\x00\x01\x00\x02\x91\x26' 
-    ComPort.write(byte_request)
-    answer = list(ComPort.read(9))
+    answer = list(ComPort.interact(byte_request, read_size=9))
     time.sleep(0.25) 
     try:
         if not answer:

@@ -17,15 +17,15 @@ def set_m(ComPort:serial.Serial, value_m:str) -> int:
     request = '3C060001' + hex_value
     byte_request = build_request(request)
     try:
-        ComPort.write(byte_request)
-        raw_answer = list(ComPort.read(9))
+        raw_answer = list(ComPort.interact(byte_request, read_size=8))
         if raw_answer == []:
             return '-1'
+        hex_answer = ''
+        for number in raw_answer[5:7]:
+            hex_answer += format(number, '02X')
+        return int(hex_answer, 16)
     except Exception as e:
         print(e) 
-    hex_answer = ''
-    for number in raw_answer[5:7]:
-        hex_answer += format(number, '02X')
-    return int(hex_answer, 16)
+
     
     

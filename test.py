@@ -139,7 +139,5 @@
 # parameters_m12_text.pack()
 
 # root.mainloop()
-
-data = b'\xff\xe5'
-degrees = int.from_bytes(data, byteorder='big', signed=True)
-print(degrees)
+scaled_velocity = 0
+print(format(scaled_velocity, '02X'))

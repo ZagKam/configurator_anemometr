@@ -1,3 +1,5 @@
+from threading import Lock
+
 import serial 
 import struct
 from date_time import time_now
@@ -20,8 +22,8 @@ def all_params(ComPort:serial.Serial) -> None:
     TIMEOUT = 1
     while True:
         try:
-            ser.write(b'\x3C\x03\x00\x00\x00\x0A\xC1\x20') 
-            velocity_speed_wind = ser.read(25)
+            velocity_speed_wind = ser.interact(b'\x3C\x03\x00\x00\x00\x0A\xC1\x20', read_size=25) 
+            # velocity_speed_wind = ser.read(25)
             time.sleep(0.05)        
             
             print((velocity_speed_wind))
@@ -30,7 +32,7 @@ def all_params(ComPort:serial.Serial) -> None:
                 raise ValueError("Incomplete response received.")
             
             parameters_data = [(struct.unpack(">H", velocity_speed_wind[3:5]))[0]/10, 
-                                        struct.unpack(">H", velocity_speed_wind[5:7])[0], 
+                                        int.from_bytes(velocity_speed_wind[5:7], byteorder='big', signed=True),
                                         struct.unpack(">H", velocity_speed_wind[7:9])[0], 
                                         struct.unpack(">H", velocity_speed_wind[9:11])[0], 
                                         struct.unpack(">H", velocity_speed_wind[11:13])[0], 
