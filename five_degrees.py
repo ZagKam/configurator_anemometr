@@ -2,9 +2,11 @@ import serial
 import struct
 import time
 
+from serialport import Serial
+
 
 READ_TIMEOUT = 40
-def rotation_five_degree(ComPort:serial.Serial) -> bool:
+def rotation_five_degree(ComPort: Serial) -> bool:
     """
     Функция для записи опорных сигналов.
         
@@ -23,3 +25,8 @@ def rotation_five_degree(ComPort:serial.Serial) -> bool:
     except Exception as e:
         print(e)
     return True
+
+
+def initial_calibration(port: Serial):
+    """Make initial calibration for motor
+    """

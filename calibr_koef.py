@@ -1,8 +1,9 @@
 import serial 
 import struct
 from build_request import build_request
+from typing import Iterable, Union, Tuple
 
-def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> list[float, float]:
+def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> Tuple[float, float]:
     
     """
     Функция для установки параметра sens для выбранного газа.

@@ -1,8 +1,13 @@
-from typing import Literal
-
+from typing import Literal, Tuple
+from time import sleep
+from threading import Thread
+from threading import Event
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
+
+import serial
+
 from serial_ports import serial_ports
 from get_version import get_version
 from serialport import Serial
@@ -10,39 +15,31 @@ from all_parameters import all_params
 from set_m_b_get_b import set_m
 from calibr_koef import calibration_koef
 from oporn_signal import entry_oporn_signal
-
-from threading import Thread
-from threading import Event
-import numpy as np
-import serial
-from sched import scheduler
-from time import sleep
-
+from calibration_loop import calibration_loop
+from five_degrees import initial_calibration
 
 
 stop_thread = True
-
 
 
 class Mutton(ttk.Button):
     ...
 
 
-
 PORTS = {'port_uz':None,
-             'port_js':None}
+         'port_js':None}
 
-def open_ports_click(name_1:str):
+
+def open_ports_click(name_1:str, name_2: str) -> Tuple[Serial, Serial]:
     try:
         global stop_thread
         stop_thread = True
-        ComPort = Serial(name_1, timeout=1)
-        ComPort.baudrate = 19200
-        return ComPort
+        ComPort1 = Serial(name_1, 19200, timeout=1)
+        ComPort2 = Serial(name_2, 38400, timeout=1)
+        return ComPort1, ComPort2
     except serial.SerialException:
         print(f"Не удалось открыть порт COM: {name_1}. Проверьте подключение.")
         return None
-
 
 
 def stream_param():
@@ -73,25 +70,32 @@ def uz_polling_cycle():
 
 
 def start_compolling():
-    port = open_ports_click(combo1.get())
-    if port is None:
+    """Open two com ports. Start displaying current parameters
+    in a separate thread
+
+    :raises ConnectionError: _description_
+    """
+    port_uz, port_js = open_ports_click(combo1.get(), combo2.get())
+    if any((port_uz is None, 
+            port_js is None)):
         raise ConnectionError("Can't open port")
-    PORTS["port_uz"] = port
+    PORTS["port_uz"] = port_uz
+    PORTS["port_js"] = port_js
+    initial_calibration(port_js)
     display_version(get_version_call())
     start_get_params_thread()
     
-    
-
 
 def start_get_params_thread():
     global thread_param
     thread_param = Thread(target=uz_polling_cycle, daemon=True)
     thread_param.start()
 
+
 def display_version(version: str):
-    version_variable.set(version)
-    
-    
+    version_variable.set(f"FW: {version}")
+
+        
 def get_version_call() -> str:
     if PORTS["port_uz"] is None:
         raise ConnectionError("COM UZ is not opened")
@@ -132,7 +136,6 @@ def find_c1_c2():
     Thread(target=_find_c1_c2, daemon=True).start()
     
 
-
 def _write_oporn_sign(end_event: Event):
     entry_oporn_signal(PORTS["port_uz"])
     all_block('normal')
@@ -148,6 +151,7 @@ def write_oporn_sign():
     Thread(target=_write_oporn_sign, args=(end_event,), daemon=True).start()
     Thread(target=loader, args=(end_event,), daemon=True).start()
     
+
 def loader(end_event):
     while True:
         for i in ["\\", "|", "/", "—"]:
@@ -157,12 +161,33 @@ def loader(end_event):
             end_write_oporn_var.set('Идет запись опорных сигналов ' + i)
     
 
-
-
 def all_block(state: Literal["disabled", "normal"]):
     for i in ALL_BUTTONS:
         i: tk.Button
         i['state'] = state
+
+
+def start_calibration_cycle():
+    """
+    Start calibration cycle in a separate thread
+    """
+    Thread(target=_start_calibration_cycle, daemon=True, 
+           name="CalibrationThread").start()
+
+
+def _start_calibration_cycle():
+    wind_velocity = entry_velocity_angle.get().strip()
+    if not wind_velocity.isdigit():
+        messagebox.showwarning("Ошибка ввода", "Введена некорректная скорость")
+        return
+    wind_velocity = int(wind_velocity)
+    PORTS["port_uz"].enter_calibration()
+    calibration_loop(current_angle.set, 
+                     wind_velocity, PORTS["port_uz"],
+                     PORTS["port_js"])
+    PORTS["port_uz"].exit_calibration()
+
+
 
 class EntryWithPlaceholder(tk.Entry):
     def __init__(self, master=None, color='grey', placeholder="PLACEHOLDER", *args, **kwargs):
@@ -572,15 +597,19 @@ create_tooltip(output_m_b_text, "Отображение параметра b")
 ##################################
 
 # Кнопка для начала записи
-velocity_angle_loop_button = Mutton(velocity_angle_loop_frame, text="Начать цикл", command=get_input)
+velocity_angle_loop_button = Mutton(
+    velocity_angle_loop_frame, text="Начать цикл", command=start_calibration_cycle)
 
 
 # Создание поля ввода скорости для цикла
 default_text = 'Введите скорость'
 entry_velocity_angle = EntryWithPlaceholder(velocity_angle_loop_frame, placeholder=default_text)
 
+current_angle = tk.StringVar(velocity_angle_loop_frame)
 # Создание окна для оповещения о завершении процесса записи опорных векторов
-velocity_angle_loop_info = tk.Label(velocity_angle_loop_frame, text=f"информация о том, какой сейчас угол")
+velocity_angle_loop_info = tk.Label(velocity_angle_loop_frame, 
+                                    textvariable=current_angle,
+                                    text=f"информация о том, какой сейчас угол")
 
 ##################################
 
