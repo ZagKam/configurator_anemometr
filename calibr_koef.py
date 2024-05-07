@@ -27,18 +27,18 @@ def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> list[flo
         raw_answer = ComPort.interact(byte_request, read_size=9)
         if raw_answer == []:
             return '-1'
+        # ##### не проверена работоспособность кода преобразующего u16 в halffloat
+        half_float_c1 = struct.unpack('<e', raw_answer[3:5])[0]
+        half_float_c2 = struct.unpack('<e', raw_answer[5:7])[0]
+        # ####
+        list_answer = [round(half_float_c1, 3), round(half_float_c2, 3)]
+        return list_answer
+    
     except Exception as e:
         print(e) 
         
     
-    # ##### не проверена работоспособность кода преобразующего u16 в halffloat
-    half_float_c1 = struct.unpack('<e', raw_answer[3:5])[0]
-    half_float_c2 = struct.unpack('<e', raw_answer[5:7])[0]
-    # ####
-    
-    list_answer = [round(half_float_c1, 3), round(half_float_c2, 3)]
-    
-    return list_answer
+
 
 # if __name__ == "__main__":
 #     import serial 
@@ -51,6 +51,6 @@ def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> list[flo
 #     ComPort.bytesize = 8    
 #     ComPort.parity = 'N'  
 #     ComPort.stopbits = 1  
-#     ComPort.write(b'\x3C\x04\x00\x00\x00\x02\x75\x26' )
+#     ComPort.write(build_request('3C0411FF0002'))
 #     raw_answer = list(ComPort.read(9))
 #     print(raw_answer)

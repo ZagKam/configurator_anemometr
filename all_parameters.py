@@ -45,4 +45,4 @@ def all_params(ComPort:serial.Serial) -> None:
             return parameters_data
         except Exception as e:
             print("On all_params", e)
-            time.sleep(TIMEOUT)
+            raise e

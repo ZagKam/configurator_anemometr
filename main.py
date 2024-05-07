@@ -1,3 +1,5 @@
+from typing import Literal
+
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
@@ -7,6 +9,7 @@ from serialport import Serial
 from all_parameters import all_params
 from set_m_b_get_b import set_m
 from calibr_koef import calibration_koef
+from oporn_signal import entry_oporn_signal
 
 from threading import Thread
 from threading import Event
@@ -43,7 +46,11 @@ def open_ports_click(name_1:str):
 
 
 def stream_param():
-    parameters = all_params(PORTS["port_uz"])
+    try:
+        parameters = all_params(PORTS["port_uz"])
+    except Exception as e:
+        print("stream_param", e)
+        raise
     for i, name in enumerate(NAME_PARAM):
         name.delete("1.0", "end")
         
@@ -55,8 +62,13 @@ def uz_polling_cycle():
     while stop_thread:
         try:
             stream_param()
+        except ValueError:
+            pass
         except Exception as e:
             print("On polling cycle", e)
+            
+            messagebox.showerror(f"{e}")
+            break
         sleep(1)
 
 
@@ -121,6 +133,36 @@ def find_c1_c2():
     
 
 
+def _write_oporn_sign(end_event: Event):
+    entry_oporn_signal(PORTS["port_uz"])
+    all_block('normal')
+    end_event.clear()
+    end_write_oporn_var.set('Запись завершена')
+    messagebox.showinfo("", "Внимание! Переподключите устройство.")
+
+
+def write_oporn_sign():
+    all_block('disabled')
+    end_event = Event()
+    end_event.set()
+    Thread(target=_write_oporn_sign, args=(end_event,), daemon=True).start()
+    Thread(target=loader, args=(end_event,), daemon=True).start()
+    
+def loader(end_event):
+    while True:
+        for i in ["\\", "|", "/", "—"]:
+            sleep(1)
+            if not end_event.is_set():
+                return
+            end_write_oporn_var.set('Идет запись опорных сигналов ' + i)
+    
+
+
+
+def all_block(state: Literal["disabled", "normal"]):
+    for i in ALL_BUTTONS:
+        i: tk.Button
+        i['state'] = state
 
 class EntryWithPlaceholder(tk.Entry):
     def __init__(self, master=None, color='grey', placeholder="PLACEHOLDER", *args, **kwargs):
@@ -538,7 +580,7 @@ default_text = 'Введите скорость'
 entry_velocity_angle = EntryWithPlaceholder(velocity_angle_loop_frame, placeholder=default_text)
 
 # Создание окна для оповещения о завершении процесса записи опорных векторов
-velocity_angle_loop_info = tk.Label(velocity_angle_loop_frame, text=f"инофрмация о том какой сейчас угол")
+velocity_angle_loop_info = tk.Label(velocity_angle_loop_frame, text=f"информация о том, какой сейчас угол")
 
 ##################################
 
@@ -569,11 +611,12 @@ create_tooltip(output_c1_c2_text, "Отображение параметров �
 ##################################
 
 # Кнопка для команды на запись опорных сигналов
-oporn_signal_button = Mutton(oporn_signal_frame, text="Запись опорных сигналов", command=get_input)
+oporn_signal_button = Mutton(oporn_signal_frame, text="Запись опорных сигналов", command=write_oporn_sign)
 
 
 # Создание окна для оповещения о завершении процесса записи опорных векторов
-end_write_oporn = tk.Label(oporn_signal_frame, text=f"здесь будет оповещение о завершении записи")
+end_write_oporn_var = tk.StringVar(oporn_signal_frame, f"здесь будет оповещение о завершении записи")
+end_write_oporn = tk.Label(oporn_signal_frame, textvariable=end_write_oporn_var)
 
 ##################################
 
@@ -646,5 +689,8 @@ cur_off_info.grid(row=1, column=2, padx=0, pady=10)
 NAME_PARAM = [parameters_vel_text,parameters_angle_text,parameters_m12_text,parameters_m21_text,
                 parameters_m34_text,parameters_m43_text,parameters_t1_text,parameters_t2_text,
                 parameters_t3_text,parameters_t4_text]
-
+ALL_BUTTONS = [button_open_port,button_close_port,
+               input_m_b_button,velocity_angle_loop_button,
+               velocity_angle_const_button,oporn_signal_button,
+               cur_off_button]
 root.mainloop()

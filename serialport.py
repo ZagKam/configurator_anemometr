@@ -22,10 +22,15 @@ class Serial(serial.Serial):
     
     mutex = Lock()
     
-    def interact(self, *args, read_size=0, **kwargs):
+    def interact(self, *args, read_size=0,
+                 read_timeout=1, **kwargs):
         with self.mutex:
+            inwaiting = self.in_waiting
+            if inwaiting:
+                print(f"Unxpected bytes on port {self.read(inwaiting)}")
             super().write(*args, **kwargs)
-            
+            if self.timeout != read_timeout:
+                self.timeout = read_timeout
             if read_size:
                 return super().read(read_size)
             super().read_all()

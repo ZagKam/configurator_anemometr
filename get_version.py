@@ -33,8 +33,8 @@ def get_version(ComPort:serial.Serial) -> int:
     
     
 if __name__ == "__main__":
-    import serial
-    ComPort = serial.Serial('COM3', timeout=1)
+    from serialport import Serial
+    ComPort = Serial('COM4', timeout=1)
     ComPort.baudrate = 19200
     ComPort.bytesize = 8
     ComPort.parity = 'N'
