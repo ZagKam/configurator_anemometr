@@ -17,7 +17,7 @@ from calibr_koef import calibration_koef
 from oporn_signal import entry_oporn_signal
 from calibration_loop import calibration_loop
 from five_degrees import initial_calibration
-
+from current_off import current_off
 
 stop_thread = True
 
@@ -34,12 +34,25 @@ def open_ports_click(name_1:str, name_2: str) -> Tuple[Serial, Serial]:
     try:
         global stop_thread
         stop_thread = True
-        ComPort1 = Serial(name_1, 19200, timeout=1)
-        ComPort2 = Serial(name_2, 38400, timeout=1)
+        try:
+            ComPort1 = Serial(name_1, 19200, timeout=1)
+        except Exception as e:
+            
+            print(f"Не удалось открыть порт {name_1}: Проверьте подключение.")
+            raise serial.SerialException(f"Не удалось открыть порт {name_1}: Проверьте подключение.")
+        try:
+            ComPort2 = Serial(name_2, 38400, timeout=1)
+        except Exception as e:
+            print(f"Не удалось открыть порт {name_2}: Проверьте подключение.")
+            ComPort1.close()
+            raise serial.SerialException(f"Не удалось открыть порт {name_2}: Проверьте подключение.")
         return ComPort1, ComPort2
-    except serial.SerialException:
-        print(f"Не удалось открыть порт COM: {name_1}. Проверьте подключение.")
-        return None
+    except serial.SerialException as e:
+        raise e
+
+def fill_combobox(e):
+    ports = serial_ports()
+    e.widget["values"] = ports
 
 
 def stream_param():
@@ -47,7 +60,7 @@ def stream_param():
         parameters = all_params(PORTS["port_uz"])
     except Exception as e:
         print("stream_param", e)
-        raise
+        raise e
     for i, name in enumerate(NAME_PARAM):
         name.delete("1.0", "end")
         
@@ -59,7 +72,8 @@ def uz_polling_cycle():
     while stop_thread:
         try:
             stream_param()
-        except ValueError:
+        except ValueError as e:
+            print(e)
             pass
         except Exception as e:
             print("On polling cycle", e)
@@ -75,10 +89,11 @@ def start_compolling():
 
     :raises ConnectionError: _description_
     """
-    port_uz, port_js = open_ports_click(combo1.get(), combo2.get())
-    if any((port_uz is None, 
-            port_js is None)):
-        raise ConnectionError("Can't open port")
+    try:
+        port_uz, port_js = open_ports_click(combo1.get(), combo2.get())
+    except Exception as e:
+        messagebox.showerror("Ошибка подключения", e)
+        return
     PORTS["port_uz"] = port_uz
     PORTS["port_js"] = port_js
     initial_calibration(port_js)
@@ -107,6 +122,8 @@ def close_ports_clicks():
         global stop_thread
         stop_thread = False
         PORTS["port_uz"].close()
+        PORTS["port_js"].close()
+        combo2.set("Выберете COMport №2")
         #thread_param.join()
         for i, name in enumerate(NAME_PARAM):
             name.delete("1.0", "end")
@@ -115,7 +132,10 @@ def close_ports_clicks():
 
 
 def _write_m():
-    
+    m_value = entry_m_b.get().strip()
+    if not m_value.isdigit():
+        messagebox.showwarning("Неверный ввод", "Введено некорректное значение")
+        return
     value = set_m(PORTS["port_uz"], entry_m_b.get())
     output_m_b_text.delete("1.0", "end")
     output_m_b_text.insert("1.0", str(value))
@@ -126,8 +146,17 @@ def write_m():
     
 
 def _find_c1_c2():
-    
+    angle = entry_angle_const.get().strip()
+    velocity = entry_velocity_const.get()
+    if not angle.isdigit() or int(angle) > 359:
+        messagebox.showwarning("Ошибка ввода", "Введена некорректный угол")
+        return
+    if not velocity.isdigit():
+        messagebox.showwarning("Ошибка ввода", "Введена некорректная скорость")
+        return
     value = calibration_koef(PORTS["port_uz"], entry_velocity_const.get(), entry_angle_const.get())
+    if value == -1:
+        messagebox.showwarning("Неверный ответ", "Прибор не ответил")
     output_c1_c2_text.delete("1.0", "end")
     output_c1_c2_text.insert("1.0", (str(value[0]) +','+ str(value[1])))
     
@@ -186,10 +215,33 @@ def _start_calibration_cycle():
                      wind_velocity, PORTS["port_uz"],
                      PORTS["port_js"])
     PORTS["port_uz"].exit_calibration()
+    messagebox.showinfo("Ифнормация", "Цикл калибровки завершён")
 
 
 def ui_update(wind_velocity: int, angle: int):
     current_angle.set(f"{wind_velocity}м/c,  {angle}"+b'\xc2\xb0'.decode("utf8") )
+
+
+def _cur_off(end_event: Event):
+    current_off(PORTS["port_uz"])
+    all_block('normal')
+    end_event.clear()
+    end_write_curr_off_var.set('Запись завершена')
+
+def cur_off():
+    all_block('disabled')
+    end_event = Event()
+    end_event.set()
+    Thread(target=_cur_off, args=(end_event,), daemon=True).start()
+    Thread(target=loader_curr, args=(end_event,), daemon=True).start()
+
+def loader_curr(end_event):
+    while True:
+        for i in ["\\", "|", "/", "—"]:
+            sleep(1)
+            if not end_event.is_set():
+                return
+            end_write_curr_off_var.set('Отключение тока ' + i)
 
 
 class EntryWithPlaceholder(tk.Entry):
@@ -262,7 +314,7 @@ root = tk.Tk()
 root.title("Анемометр УЗ")
 
 # Установка размеров окна
-root.geometry("800x450")  # Ширина x Высота
+root.geometry("1000x300")  # Ширина x Высота
 
 
 ################################
@@ -332,14 +384,16 @@ cur_off_title_label = tk.Label(cur_off_frame)
 
 
 # Создание Combobox
-values = serial_ports()
-combo1 = ttk.Combobox(comport_frame, values=values, width=22)
+#values = serial_ports()
+combo1 = ttk.Combobox(comport_frame, width=22)
+combo1.bind('<Button-1>', fill_combobox)
 
 combo1.set("Выберите COMport №1")
 
 # Создание Combobox
-values = serial_ports()
-combo2 = ttk.Combobox(comport_frame, values=values, width=22)
+#values = serial_ports()
+combo2 = ttk.Combobox(comport_frame, width=22)
+combo2.bind('<Button-1>', fill_combobox)
 
 combo2.set("Выберите COMport №2")
 
@@ -513,10 +567,11 @@ end_write_oporn = tk.Label(oporn_signal_frame, textvariable=end_write_oporn_var)
 ##################################
 
 # Кнопка для оставновки тока удержания 
-cur_off_button = Mutton(cur_off_title_label, text="Отключение тока удержания", command=get_input)
+cur_off_button = Mutton(cur_off_frame, text="Отключение тока удержания", command=cur_off)
 
 # Создание окна для оповещения о завершении процесса записи опорных векторов
-cur_off_info = tk.Label(cur_off_title_label, text=f"здесь будет оповещение об отключении тока")
+end_write_curr_off_var = tk.StringVar(cur_off_frame, f"здесь будет оповещение об отключении тока")
+cur_off_info = tk.Label(cur_off_frame, textvariable=end_write_curr_off_var)
 
 ##################################
 
@@ -630,8 +685,8 @@ def build_input_minor_frames():
     output_c1_c2_text.grid(row=0, column=3, padx=0, pady=1)
     oporn_signal_button.grid(row=0, column=0, padx=10, pady=1)
     end_write_oporn.grid(row=0, column=1, padx=10, pady=1)
-    cur_off_button.grid(row=0, column=1, padx=0, pady=10)  
-    cur_off_info.grid(row=0, column=2, padx=0, pady=10)
+    cur_off_button.grid(row=0, column=1, padx=10, pady=10)  
+    cur_off_info.grid(row=0, column=2, padx=10, pady=10)
 
 
 build_app()

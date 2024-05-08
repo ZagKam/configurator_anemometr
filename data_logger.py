@@ -23,6 +23,6 @@ def add_line(c1: float, c2: float):
         try:
             if mode == 'w':  
                 file.write('SEP=,\nDate,  c1, c2, \n')
-            file.write(f"{time},{c1},{c2}")                            
+            file.write(f"{time},{c1},{c2}\n")                            
         except Exception as e:
             print(e)

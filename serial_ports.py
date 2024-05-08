@@ -1,6 +1,7 @@
 import serial
 from typing import List
 from serial import SerialException
+from time import sleep
 
 def serial_ports() -> List[str]:
     """
@@ -15,8 +16,21 @@ def serial_ports() -> List[str]:
         try:
             s = serial.Serial(port)
             s.close()
+            sleep(0.05)
             list_of_ports.append(port)
-        except (OSError, serial.SerialException):
+        except (OSError, serial.SerialException) as e:
+            try:
+                
+                s = serial.Serial(port, 9600)
+                s.close()
+            except:
+                pass
+                try:
+                    s = serial.Serial(port, 19200)
+                    s.close()
+                except:
+                    pass
+                
             pass
     return list_of_ports
 

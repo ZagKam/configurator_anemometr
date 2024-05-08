@@ -15,8 +15,10 @@ def all_params(ComPort:serial.Serial) -> None:
         - ComPort: seiralSerial класс бибилеотки serial для подключения к плате;
     Возвращает: 
     """
-    device_name = 'Logger'
-    
+    device_name = 'Logger_all_parameter'
+    time = time_now()
+    write_path = device_name + '.csv'
+    mode = 'a' if os.path.exists(write_path) else 'w'
     ser = ComPort
     
     TIMEOUT = 1
@@ -27,7 +29,8 @@ def all_params(ComPort:serial.Serial) -> None:
             time.sleep(0.05)        
             
             print((velocity_speed_wind))
-
+            if not velocity_speed_wind:
+                raise ValueError("Отсутствует ответ от датчика")
             if len(velocity_speed_wind) != 25:
                 raise ValueError("Incomplete response received.")
             
@@ -41,6 +44,14 @@ def all_params(ComPort:serial.Serial) -> None:
                                         struct.unpack(">H", velocity_speed_wind[17:19])[0],
                                         struct.unpack(">H", velocity_speed_wind[19:21])[0],
                                         struct.unpack(">H", velocity_speed_wind[21:23])[0]] 
+            
+            with open(write_path, mode) as file:
+                try:
+                    if mode == 'w':  
+                        file.write('SEP=,\nDate,  veocity, angle, m12, m21, m34, m43, t1, t2, t3, t4, \n')
+                    file.write(f"{time},{c1},{c2}\n")                            
+                except Exception as e:
+                    print(e)
             
             return parameters_data
         except Exception as e:

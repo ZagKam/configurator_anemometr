@@ -26,7 +26,7 @@ def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> Tuple[fl
     byte_request = build_request(request)
     try:
         raw_answer = ComPort.interact(byte_request, read_size=9)
-        if raw_answer == []:
+        if not raw_answer:
             return '-1'
         # ##### не проверена работоспособность кода преобразующего u16 в halffloat
         half_float_c1 = struct.unpack('<e', raw_answer[3:5])[0]
@@ -37,6 +37,7 @@ def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> Tuple[fl
     
     except Exception as e:
         print(e) 
+        return 0, 0
         
     
 

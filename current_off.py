@@ -15,7 +15,6 @@ def current_off(ComPort:serial.Serial) -> bool:
         ПРМЕЧАНИЕ: Эта функция с шаговым двигателем
     """
     byte_request = b'\x01\x10\x00\x0E\x00\x01\x02\x00\x00\xA7\x7E' 
-    answer = list(ComPort.interact(byte_request, read_size=9))
     
     try: 
         answer = list(ComPort.interact(byte_request, read_size=8, read_timeout=READ_TIMEOUT))
