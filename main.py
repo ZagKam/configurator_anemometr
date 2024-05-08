@@ -78,7 +78,8 @@ def uz_polling_cycle():
         except Exception as e:
             print("On polling cycle", e)
             
-            messagebox.showerror(f"{e}")
+            messagebox.showerror((f"В цикле опроса анемоментра возникла ошибка. "
+                                  f"Для перезапуска закройте порт и откройте его повторно. \n{e}"))
             break
         sleep(1)
 
@@ -211,6 +212,7 @@ def _start_calibration_cycle():
         return
     wind_velocity = int(wind_velocity)
     PORTS["port_uz"].enter_calibration()
+    initial_calibration(PORTS["port_js"])
     calibration_loop(ui_update, 
                      wind_velocity, PORTS["port_uz"],
                      PORTS["port_js"])
@@ -705,9 +707,16 @@ build_app()
 
 
 
-NAME_PARAM = [parameters_vel_text,parameters_angle_text,parameters_m12_text,parameters_m21_text,
-                parameters_m34_text,parameters_m43_text,parameters_t1_text,parameters_t2_text,
-                parameters_t3_text,parameters_t4_text]
+NAME_PARAM = [parameters_vel_text,
+              parameters_angle_text,
+              parameters_m12_text,
+              parameters_m21_text,
+              parameters_m34_text,
+              parameters_m43_text,
+              parameters_t1_text,
+              parameters_t2_text,
+              parameters_t3_text,
+              parameters_t4_text]
 ALL_BUTTONS = [button_open_port,button_close_port,
                input_m_b_button,velocity_angle_loop_button,
                velocity_angle_const_button,oporn_signal_button,

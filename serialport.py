@@ -3,6 +3,7 @@ from threading import Lock, RLock, current_thread
 from time import sleep
 import serial
 import os
+from time import sleep
 
 if os.getenv("USERNAME") == "fahru":
 
@@ -57,11 +58,13 @@ else:
                 if inwaiting:
                     print(f"Unxpected bytes on port {self.read(inwaiting)}")
                 super().write(*args, **kwargs)
+                sleep(0.05)
                 if self.timeout != read_timeout:
                     self.timeout = read_timeout
                 if read_size:
                     return super().read(read_size)
                 super().read_all()
+                sleep(0.05)
 
 #from serial import Serial
 

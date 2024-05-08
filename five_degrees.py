@@ -17,7 +17,7 @@ def rotation_five_degree(ComPort: Serial) -> bool:
         
         ПРМЕЧАНИЕ: Эта функция с шаговым двигателем
     """
-    byte_request = b'\x01\x10\x00\x1C\x00\x01\x02\x05\x00\x00\x00\xD2\xFB' 
+    byte_request = b'\x01\x06\x00\x1C\x00\x01\x89\xCC' 
     
     try: 
         answer = list(ComPort.interact(byte_request, read_size=8, read_timeout=READ_TIMEOUT))
