@@ -182,11 +182,14 @@ def _start_calibration_cycle():
         return
     wind_velocity = int(wind_velocity)
     PORTS["port_uz"].enter_calibration()
-    calibration_loop(current_angle.set, 
+    calibration_loop(ui_update, 
                      wind_velocity, PORTS["port_uz"],
                      PORTS["port_js"])
     PORTS["port_uz"].exit_calibration()
 
+
+def ui_update(wind_velocity: int, angle: int):
+    current_angle.set(f"{wind_velocity}м/c,  {angle}"+b'\xc2\xb0'.decode("utf8") )
 
 
 class EntryWithPlaceholder(tk.Entry):
