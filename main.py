@@ -18,6 +18,7 @@ from oporn_signal import entry_oporn_signal
 from calibration_loop import calibration_loop
 from five_degrees import initial_calibration
 from current_off import current_off
+from program_logger import logger
 
 stop_thread = True
 
@@ -38,12 +39,12 @@ def open_ports_click(name_1:str, name_2: str) -> Tuple[Serial, Serial]:
             ComPort1 = Serial(name_1, 19200, timeout=1)
         except Exception as e:
             
-            print(f"Не удалось открыть порт {name_1}: Проверьте подключение.")
+            logger.warning(f"Не удалось открыть порт {name_1}: Проверьте подключение.")
             raise serial.SerialException(f"Не удалось открыть порт {name_1}: Проверьте подключение.")
         try:
             ComPort2 = Serial(name_2, 38400, timeout=1)
         except Exception as e:
-            print(f"Не удалось открыть порт {name_2}: Проверьте подключение.")
+            logger.warning(f"Не удалось открыть порт {name_2}: Проверьте подключение.")
             ComPort1.close()
             raise serial.SerialException(f"Не удалось открыть порт {name_2}: Проверьте подключение.")
         return ComPort1, ComPort2
@@ -59,7 +60,7 @@ def stream_param():
     try:
         parameters = all_params(PORTS["port_uz"])
     except Exception as e:
-        print("stream_param", e)
+        logger.warning(f"{e}")
         raise e
     for i, name in enumerate(NAME_PARAM):
         name.delete("1.0", "end")
@@ -73,13 +74,15 @@ def uz_polling_cycle():
         try:
             stream_param()
         except ValueError as e:
-            print(e)
+            logger.debug(f"{e}")
             pass
         except Exception as e:
-            print("On polling cycle", e)
+            logger.error(f"UZ polling cycle break {e}")
             
-            messagebox.showerror((f"В цикле опроса анемоментра возникла ошибка. "
-                                  f"Для перезапуска закройте порт и откройте его повторно. \n{e}"))
+            messagebox.showerror(
+                "Ошибка",
+                (f"В цикле опроса анемоментра возникла ошибка. "
+                f"Для перезапуска закройте порт и откройте его повторно. \n{e}"))
             break
         sleep(1)
 
@@ -92,7 +95,9 @@ def start_compolling():
     """
     try:
         port_uz, port_js = open_ports_click(combo1.get(), combo2.get())
+        logger.debug(f"UZ polling was started on {port_uz}")
     except Exception as e:
+        logger.info(f"Couldn't connect to serial {e}")
         messagebox.showerror("Ошибка подключения", e)
         return
     PORTS["port_uz"] = port_uz
@@ -109,6 +114,7 @@ def start_get_params_thread():
 
 
 def display_version(version: str):
+    logger.debug(f"UZ FW version is {version}")
     version_variable.set(f"FW: {version}")
 
         
@@ -128,16 +134,19 @@ def close_ports_clicks():
         #thread_param.join()
         for i, name in enumerate(NAME_PARAM):
             name.delete("1.0", "end")
-    except serial.SerialException:
-        print(f"Что-то пошло не так при закрытии Com-портов")
+        logger.info("COM ports were closed")
+    except serial.SerialException as e:
+        logger.exception(e)
 
 
 def _write_m():
     m_value = entry_m_b.get().strip()
     if not m_value.isdigit():
+        logger.debug(f"Incorrect input for {m_value=}")
         messagebox.showwarning("Неверный ввод", "Введено некорректное значение")
         return
     value = set_m(PORTS["port_uz"], entry_m_b.get())
+    logger.info(f"For m_value {value=} is set")
     output_m_b_text.delete("1.0", "end")
     output_m_b_text.insert("1.0", str(value))
 
@@ -150,14 +159,17 @@ def _find_c1_c2():
     angle = entry_angle_const.get().strip()
     velocity = entry_velocity_const.get()
     if not angle.isdigit() or int(angle) > 359:
-        messagebox.showwarning("Ошибка ввода", "Введена некорректный угол")
+        messagebox.showwarning("Ошибка ввода", "Введен некорректный угол")
         return
     if not velocity.isdigit():
         messagebox.showwarning("Ошибка ввода", "Введена некорректная скорость")
         return
+    logger.debug(f"Function was called with {angle=} {velocity=}")
     value = calibration_koef(PORTS["port_uz"], entry_velocity_const.get(), entry_angle_const.get())
     if value == -1:
+        logger.info("UZ didn't respond")
         messagebox.showwarning("Неверный ответ", "Прибор не ответил")
+    logger.debug(f"New {value=} was set")
     output_c1_c2_text.delete("1.0", "end")
     output_c1_c2_text.insert("1.0", (str(value[0]) +','+ str(value[1])))
     
@@ -168,10 +180,14 @@ def find_c1_c2():
 
 def _write_oporn_sign(end_event: Event):
     entry_oporn_signal(PORTS["port_uz"])
+    logger.debug(f"UZ oporn signals setting has started")
     all_block('normal')
     end_event.clear()
     end_write_oporn_var.set('Запись завершена')
-    messagebox.showinfo("", "Внимание! Переподключите устройство.")
+    logger.debug("Oporn signals settings is done")
+    messagebox.showinfo(
+        "Уведомление", 
+        "Запись завершена. Снимите питание с датчика и подключите снова.")
 
 
 def write_oporn_sign():
@@ -201,6 +217,7 @@ def start_calibration_cycle():
     """
     Start calibration cycle in a separate thread
     """
+    status.set("Калибровка началась")
     Thread(target=_start_calibration_cycle, daemon=True, 
            name="CalibrationThread").start()
 
@@ -217,7 +234,9 @@ def _start_calibration_cycle():
                      wind_velocity, PORTS["port_uz"],
                      PORTS["port_js"])
     PORTS["port_uz"].exit_calibration()
-    messagebox.showinfo("Ифнормация", "Цикл калибровки завершён")
+    status.set("Калибровка завершена")
+    messagebox.showinfo("Информация", "Цикл калибровки завершён")
+    current_angle.set("")
 
 
 def ui_update(wind_velocity: int, angle: int):
@@ -225,10 +244,13 @@ def ui_update(wind_velocity: int, angle: int):
 
 
 def _cur_off(end_event: Event):
-    current_off(PORTS["port_uz"])
+    if current_off(PORTS["port_js"]):    
+        end_write_curr_off_var.set('Запись завершена')
+        messagebox.showinfo("Уведомение", 
+                            ("Удержание двигателя отключено. Для продолжения работы "
+                             "отключите от него питание и подключите снова"))
     all_block('normal')
     end_event.clear()
-    end_write_curr_off_var.set('Запись завершена')
 
 def cur_off():
     all_block('disabled')
@@ -313,7 +335,7 @@ class ComportFrame(ttk.Frame):
 
 
 root = tk.Tk()
-root.title("Анемометр УЗ")
+root.title("Анемометр УЗ v.0.0.1b")
 
 # Установка размеров окна
 root.geometry("1000x300")  # Ширина x Высота
@@ -399,6 +421,8 @@ combo2.bind('<Button-1>', fill_combobox)
 
 combo2.set("Выберите COMport №2")
 
+status = tk.StringVar(comport_frame)
+status_label = tk.Label(comport_frame, textvariable=status)
 version_variable = tk.StringVar()
 # Создание кнопки и размещение с помощью grid
 button_open_port = Mutton(comport_frame, 
@@ -594,11 +618,12 @@ def build_comport_frame():
     """
     Установка виджетов связанных с СОМ портами
     """
-    combo1.grid(row=0, column=0)
-    combo2.grid(row=1, column=0)
-    button_open_port.grid(row=2, column=0)
+    combo1.grid(row=0, column=0, pady=5)
+    combo2.grid(row=1, column=0, pady=5)
+    button_open_port.grid(row=2, column=0, pady=(10,5))
     button_close_port.grid(row=3, column=0)
-    info_vers_label.grid(row=4, column=0, padx=0, pady=0)
+    info_vers_label.grid(row=4, column=0, padx=0, pady=15)
+    status_label.grid(row=5, column=0, sticky="sew")
     
 
 

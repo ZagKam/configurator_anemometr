@@ -21,4 +21,5 @@ def current_off(ComPort:serial.Serial) -> bool:
         time.sleep(0.25)
     except Exception as e:
         print(e)
+        return False
     return True

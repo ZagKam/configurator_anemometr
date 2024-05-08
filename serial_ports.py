@@ -3,6 +3,8 @@ from typing import List
 from serial import SerialException
 from time import sleep
 
+from program_logger import logger
+
 def serial_ports() -> List[str]:
     """
     Функция определения COM-порт в windows
@@ -18,6 +20,7 @@ def serial_ports() -> List[str]:
             s.close()
             sleep(0.05)
             list_of_ports.append(port)
+            logger.debug(f"Found COM port {port}")
         except (OSError, serial.SerialException) as e:
             try:
                 
@@ -32,6 +35,8 @@ def serial_ports() -> List[str]:
                     pass
                 
             pass
+    if list_of_ports:
+        logger.debug(f"Found COM port {list_of_ports}")
     return list_of_ports
 
 

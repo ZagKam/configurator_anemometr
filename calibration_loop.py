@@ -9,7 +9,7 @@ def calibration_loop(ui_update: callable, wind_velocity: int, port_uz: Serial,
                      port_js: Serial):
     angle_scale = 1/5
     
-    for i in range(round(10 * angle_scale)):
+    for i in range(round(359 * angle_scale)):
         angle = round(i / angle_scale)
         wind_vel_direct(port_uz, str(wind_velocity),
                         str(angle))

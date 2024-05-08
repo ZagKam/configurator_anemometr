@@ -5,6 +5,7 @@ import struct
 from date_time import time_now
 import os
 from time import sleep
+from program_logger import logger
 
 
 def all_params(ComPort:serial.Serial) -> None:
@@ -27,11 +28,12 @@ def all_params(ComPort:serial.Serial) -> None:
         try:
             velocity_speed_wind = ser.interact(b'\x3C\x03\x00\x00\x00\x0A\xC1\x20', read_size=25) 
             # velocity_speed_wind = ser.read(25)
-           
-            print((velocity_speed_wind))
+        
             if not velocity_speed_wind:
+                logger.info(f"UZ didn't answer")
                 raise ValueError("Отсутствует ответ от датчика")
             if len(velocity_speed_wind) != 25:
+                logger.warning("Incomplete response received")
                 raise ValueError("Incomplete response received.")
             
             parameters_data = [struct.unpack(">H", velocity_speed_wind[3:5])[0]/10, 
@@ -51,9 +53,9 @@ def all_params(ComPort:serial.Serial) -> None:
                         file.write('SEP=,\nDate,  veocity, angle, m12, m21, m34, m43, t1, t2, t3, t4, \n')
                     file.write(f"{time},{','.join([str(i) for i in parameters_data])}\n")                            
                 except Exception as e:
-                    print(e)
+                    logger.warning(f"Couldn't write to device log {e}")
             
             return parameters_data
         except Exception as e:
-            print("On all_params", e)
+            logger.exception(e)
             raise e
