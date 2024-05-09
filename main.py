@@ -5,6 +5,7 @@ from threading import Event
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
+import ttkbootstrap as ttk
 
 import serial
 
@@ -25,6 +26,12 @@ stop_thread = True
 
 class Mutton(ttk.Button):
     ...
+
+
+class InputFrameButton(Mutton):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, width=28, **kwargs)
 
 
 PORTS = {'port_uz':None,
@@ -334,7 +341,7 @@ class ComportFrame(ttk.Frame):
     ...
 
 
-root = tk.Tk()
+root = ttk.Window(themename="united")
 root.title("Анемометр УЗ v.0.0.1b")
 
 # Установка размеров окна
@@ -346,62 +353,63 @@ root.geometry("1000x300")  # Ширина x Высота
 
 
 # Создаем рамку для содержания выбора и подключения COMport
-comport_frame = tk.Frame(root)
+comport_frame = ttk.Frame(root)
 
 com_port_frame_separator = ttk.Separator(root, orient=tk.VERTICAL)
 
 # Создаем рамку для отображения физических параметров в реальном времени
-main_interaction_frame = tk.Frame(root)
+main_interaction_frame = ttk.Frame(root)
 parameters_frame = ttk.Frame(main_interaction_frame)
 
-input_frame = tk.Frame(main_interaction_frame)
+input_frame = ttk.LabelFrame(main_interaction_frame, 
+                             text="Настройка датчика")
 
 
 # Создаем рамку для содержания команды записи m и b
-entry_b_m_frame = tk.Frame(input_frame)
+entry_b_m_frame = ttk.Frame(input_frame)
 
 
 # Создаем рамку для цикла записи скорости под разными углами (0,5,10,15)
-velocity_angle_loop_frame = tk.Frame(input_frame)
+velocity_angle_loop_frame = ttk.Frame(input_frame)
 
 
 # Создаем рамку для записи определенного угла и скорости
-velocity_angle_const_frame = tk.Frame(input_frame)
+velocity_angle_const_frame = ttk.Frame(input_frame)
 
 
 # Создаем рамку для записи опорных сигналов
-oporn_signal_frame = tk.Frame(input_frame)
+oporn_signal_frame = ttk.Frame(input_frame)
 
 # Создаем рамку для отключения тока удержания
-cur_off_frame = tk.Frame(input_frame)
+cur_off_frame = ttk.Frame(input_frame)
 
 #################################
 
 
 # Создаем метку для надписи над окном вывода
-comport_title_label = tk.Label(comport_frame)
+comport_title_label = ttk.Label(comport_frame)
 
 # Создаем метку для надписи над окном вывода
-parameters_title_label = tk.Label(parameters_frame)
+parameters_title_label = ttk.Label(parameters_frame)
 
 # Создаем метку для надписи над окном вывода
 # entry_b_m_title_label = tk.Label(entry_b_m_frame)
 
 
 # Создаем метку для надписи над окном вывода
-velocity_angle_loop_title_label = tk.Label(velocity_angle_loop_frame)
+velocity_angle_loop_title_label = ttk.Label(velocity_angle_loop_frame)
 
 
 # Создаем метку для надписи над окном вывода
-velocity_angle_const_title_label = tk.Label(velocity_angle_const_frame)
+velocity_angle_const_title_label = ttk.Label(velocity_angle_const_frame)
 
 
 # Создаем метку для надписи над окном вывода
-oporn_signal_title_label = tk.Label(oporn_signal_frame)
+oporn_signal_title_label = ttk.Label(oporn_signal_frame)
 
 
 # Создаем метку для надписи над окном вывода
-cur_off_title_label = tk.Label(cur_off_frame)
+cur_off_title_label = ttk.Label(cur_off_frame)
 
 
 ###################################
@@ -422,7 +430,7 @@ combo2.bind('<Button-1>', fill_combobox)
 combo2.set("Выберите COMport №2")
 
 status = tk.StringVar(comport_frame)
-status_label = tk.Label(comport_frame, textvariable=status)
+status_label = ttk.Label(comport_frame, textvariable=status)
 version_variable = tk.StringVar()
 # Создание кнопки и размещение с помощью grid
 button_open_port = Mutton(comport_frame, 
@@ -441,75 +449,75 @@ info_vers_label = tk.Label(comport_frame, textvariable=version_variable)
 ##############################
 
 # окно вывода скорости
-vel_label = tk.Label(parameters_frame, text="Отображение скорости ветра")
+vel_label = ttk.Label(parameters_frame, text="Отображение скорости ветра")
 
-parameters_vel_text = tk.Text(parameters_frame)
+parameters_vel_text = ttk.Text(parameters_frame)
 parameters_vel_text.configure(width=15, height=1)
 
 # окно вывода угла
-angle_label = tk.Label(parameters_frame, text="Отображение угла")
+angle_label = ttk.Label(parameters_frame, text="Отображение угла")
 
-parameters_angle_text = tk.Text(parameters_frame)
+parameters_angle_text = ttk.Text(parameters_frame)
 parameters_angle_text.configure(width=15, height=1)
 
 
 # окно вывода m12
 m12_label = tk.Label(parameters_frame, text="Отображение m12")
 
-parameters_m12_text = tk.Text(parameters_frame)
+parameters_m12_text = ttk.Text(parameters_frame)
 parameters_m12_text.configure(width=15, height=1)
 
 
 # окно вывода m21
-m21_label = tk.Label(parameters_frame, text="Отображение m21")
+m21_label = ttk.Label(parameters_frame, text="Отображение m21")
 
-parameters_m21_text = tk.Text(parameters_frame)
+parameters_m21_text = ttk.Text(parameters_frame)
 parameters_m21_text.configure(width=15, height=1)
 
 
 # окно вывода m34
-m34_label = tk.Label(parameters_frame, text="Отображение m34")
+m34_label = ttk.Label(parameters_frame, text="Отображение m34")
 
-parameters_m34_text = tk.Text(parameters_frame)
+parameters_m34_text = ttk.Text(parameters_frame)
 parameters_m34_text.configure(width=15, height=1)
 
 
 # окно вывода m43
-m43_label = tk.Label(parameters_frame, text="Отображение m43")
+m43_label = ttk.Label(parameters_frame, text="Отображение m43")
 
-parameters_m43_text = tk.Text(parameters_frame)
+parameters_m43_text = ttk.Text(parameters_frame)
 parameters_m43_text.configure(width=15, height=1)
 
 
 
 # окно вывода t1
-t1_label = tk.Label(parameters_frame, text="Отображение t1")
+t1_label = ttk.Label(parameters_frame, text="Отображение t1")
 
-parameters_t1_text = tk.Text(parameters_frame)
+parameters_t1_text = ttk.Text(parameters_frame)
 parameters_t1_text.configure(width=15, height=1)
 
 
 
 # окно вывода t2
-t2_label = tk.Label(parameters_frame, text="Отображение t2")
+t2_label = ttk.Label(parameters_frame, text="Отображение t2")
 
-parameters_t2_text = tk.Text(parameters_frame)
+parameters_t2_text = ttk.Text(parameters_frame)
 parameters_t2_text.configure(width=15, height=1)
 
 
 
 
 # окно вывода t3
-t3_label = tk.Label(parameters_frame, text="Отображение t3")
+t3_label = ttk.Label(parameters_frame, text="Отображение t3")
 
-parameters_t3_text = tk.Text(parameters_frame)
+parameters_t3_text = ttk.Text(parameters_frame)
 parameters_t3_text.configure(width=15, height=1)
 
 
 
 
 # окно вывода t4
-t4_label = tk.Label(parameters_frame, text="Отображение t4")
+t4_label = ttk.Label(parameters_frame, text="Отображение t4")
 
 parameters_t4_text = tk.Text(parameters_frame)
 parameters_t4_text.configure(width=15, height=1)
@@ -519,7 +527,7 @@ parameters_t4_text.configure(width=15, height=1)
 ##############################
 
 # Кнопка для начала записи
-input_m_b_button = Mutton(entry_b_m_frame, text="Запись m", command=write_m)
+input_m_b_button = InputFrameButton(entry_b_m_frame, text="Запись m", command=write_m)
 
 
 # Создание поля ввода и размещение с помощью grid
@@ -528,7 +536,7 @@ entry_m_b = EntryWithPlaceholder(entry_b_m_frame, placeholder=default_text)
 
 
 # окно вывода b
-output_m_b_text = tk.Text(entry_b_m_frame)
+output_m_b_text = ttk.Text(entry_b_m_frame)
 output_m_b_text.configure(width=15, height=1)
 
 
@@ -540,7 +548,7 @@ output_m_b_text.configure(width=15, height=1)
 ##################################
 
 # Кнопка для начала записи
-velocity_angle_loop_button = Mutton(
+velocity_angle_loop_button = InputFrameButton(
     velocity_angle_loop_frame, text="Начать цикл", command=start_calibration_cycle)
 
 
@@ -550,14 +558,14 @@ entry_velocity_angle = EntryWithPlaceholder(velocity_angle_loop_frame, placehold
 
 current_angle = tk.StringVar(velocity_angle_loop_frame)
 # Создание окна для оповещения о завершении процесса записи опорных векторов
-velocity_angle_loop_info = tk.Label(velocity_angle_loop_frame, 
+velocity_angle_loop_info = ttk.Label(velocity_angle_loop_frame, 
                                     textvariable=current_angle,
                                     text=f"информация о том, какой сейчас угол")
 
 ##################################
 
 # Кнопка для определения значений определенной скороти и угла
-velocity_angle_const_button = Mutton(velocity_angle_const_frame, text="Найти с1,с2", command=find_c1_c2)
+velocity_angle_const_button = InputFrameButton(velocity_angle_const_frame, text="Найти с1,с2", command=find_c1_c2)
 
 
 # Создание поля ввода скорости для определения одного значения
@@ -570,7 +578,7 @@ default_text = 'Введите угол'
 entry_angle_const = EntryWithPlaceholder(velocity_angle_const_frame, placeholder=default_text)
 
 # окно вывода c1,c2
-output_c1_c2_text = tk.Text(velocity_angle_const_frame)
+output_c1_c2_text = ttk.Text(velocity_angle_const_frame)
 output_c1_c2_text.configure(width=15, height=1)
 
 
@@ -583,21 +591,21 @@ output_c1_c2_text.configure(width=15, height=1)
 ##################################
 
 # Кнопка для команды на запись опорных сигналов
-oporn_signal_button = Mutton(oporn_signal_frame, text="Запись опорных сигналов", command=write_oporn_sign)
+oporn_signal_button = InputFrameButton(oporn_signal_frame, text="Запись опорных сигналов", command=write_oporn_sign)
 
 
 # Создание окна для оповещения о завершении процесса записи опорных векторов
 end_write_oporn_var = tk.StringVar(oporn_signal_frame, f"здесь будет оповещение о завершении записи")
-end_write_oporn = tk.Label(oporn_signal_frame, textvariable=end_write_oporn_var)
+end_write_oporn = ttk.Label(oporn_signal_frame, textvariable=end_write_oporn_var)
 
 ##################################
 
 # Кнопка для оставновки тока удержания 
-cur_off_button = Mutton(cur_off_frame, text="Отключение тока удержания", command=cur_off)
+cur_off_button = InputFrameButton(cur_off_frame, text="Отключение тока удержания", command=cur_off)
 
 # Создание окна для оповещения о завершении процесса записи опорных векторов
 end_write_curr_off_var = tk.StringVar(cur_off_frame, f"здесь будет оповещение об отключении тока")
-cur_off_info = tk.Label(cur_off_frame, textvariable=end_write_curr_off_var)
+cur_off_info = ttk.Label(cur_off_frame, textvariable=end_write_curr_off_var)
 
 ##################################
 
@@ -630,7 +638,7 @@ def build_comport_frame():
 def build_main_interaction_frame():
     """Основной фрэйм для взаимодействия пользователя
     """
-    input_frame.grid(row=0, column=0, sticky="w")
+    input_frame.grid(row=0, column=0, sticky="w", ipadx=10)
     parameters_frame.grid(row=1, column=0, pady=10)
 
 
@@ -688,7 +696,7 @@ def build_parameters_frame():
 
 
 def build_input_frame():
-    entry_b_m_frame.grid(row=0, column=0, padx=10, pady=0, sticky="w")
+    entry_b_m_frame.grid(row=0, column=0, padx=10, pady=10, sticky="w")
     velocity_angle_loop_frame.grid(row=1, column=0, padx=10, pady=0, sticky="w")
     velocity_angle_const_frame.grid(row=2, column=0, padx=10, pady=0, sticky="w")
     oporn_signal_frame.grid(row=3, column=0, padx=10, pady=0, sticky="w")
@@ -698,7 +706,7 @@ def build_input_frame():
 
 
 def build_input_minor_frames():
-    input_m_b_button.grid(row=0, column=0, padx=10, pady=1)
+    input_m_b_button.grid(row=0, column=0, padx=10, pady=2)
     entry_m_b.grid(row=0, column=1)
     output_m_b_text.grid(row=0, column=2, padx=20, pady=1) 
 
