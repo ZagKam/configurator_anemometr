@@ -1,89 +1,50 @@
-import cProfile
-
-from pstats import Stats, SortKey
-
-def profileit(func):
-    def wrapper(*args, **kwargs):
-        print(func)
-        with cProfile.Profile() as pr:
-            result = func(*args, **kwargs)
-        
-        Stats(pr).sort_stats(SortKey.TIME).print_stats(10) # sort by total execution time and limit output to 10 lines
-        return result
-
-    return wrapper
-
-from collections import deque
-from random import random
 from threading import Thread
-from time import sleep, time
 
 import ttkbootstrap as ttk
-from ttkbootstrap.tableview import Tableview
+from ttkbootstrap.constants import *
+from time import sleep
 
 
-curparam_coldata = [
-    "Время",
-    "Скорость",
-    "Направление",
-    "М12",
-    "М21",
-    "М34",
-    "М43",
-    "Т1",
-    "Т2",
-    "Т3",
-    "Т4"
-]
-
-dataqueue = deque()
-
-class CurParamTable(Tableview):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(
-            *args, 
-            coldata=curparam_coldata,
-            # rowdata=[[random()*255 for _ in  range(len(curparam_coldata))] for i in range(20)],
-            paginated=True,
-            delimiter=",",
-            **kwargs)
-        self.autoscroll = True
-    
-    
-    def sort_by_date(self):
-        self.sort_column_data(cid=0, sort=1)
-
-    @profileit
-    def sort_column_data(self, event=None, cid=None, sort=None):
-        return super().sort_column_data(event, cid, sort)
-    
-    @profileit
-    def load_table_data(self, clear_filters=False):
-        return super().load_table_data(clear_filters)
-    
-
-def add_row():
+def load():
+    i = 0
     while True:
-        values = [int(time())]
-        values.extend([round(random() * 255) for _ in range(len(curparam_coldata)-1)])
-        dt.insert_row("end",
-            values
-        )
-        root.after(100, refresher)
-        sleep(1)
+        meter.configure(subtext=f"Угол {i}")
+        for i in range(10):
+            app.after(1, lambda: meter.step(1))
+            sleep(0.01)
+        for i in range(10):
+            if i % 2 == 0:
+                app.after(10, lambda: meter.step(1))
+                
+                app.after(50, lambda: meter.step(1))
+            else:
+                app.after(10, lambda: meter.step(-1))
+                app.after(50, lambda: meter.step(-1))
+            sleep(0.2)
+
+app = ttk.Window()
+
+meter = ttk.Meter(
+    metersize=360,
+    arcrange=360,
+    amounttotal=360,
+    padding=5,
+    amountused=0,
+    metertype="semi",
+    subtext="miles per hour",
+    interactive=True,
+)
+meter.pack()
+
+# update the amount used directly
+meter.configure(amountused = 0)
+
+# update the amount used with another widget
+entry = ttk.Entry(textvariable=meter.amountusedvar)
+entry.pack(fill=X)
 
 
-def refresher(*args):
-    dt.goto_last_page()
-      
-
-
-
-
-root = ttk.Window(themename="united")
-dt = CurParamTable(root)
-
-dt.pack()
-Thread(target=add_row, daemon=True).start()
-root.mainloop()
+# update the subtext
+meter.configure(subtext="loading...")
+Thread(target=load, daemon=True).start()
+app.mainloop()

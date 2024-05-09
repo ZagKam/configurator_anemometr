@@ -18,6 +18,10 @@ from typing import Literal, Tuple, Iterable
 from time import sleep
 from threading import Thread
 from threading import Event
+from collections import deque
+from sched import scheduler
+
+
 import tkinter as tk
 from tkinter import messagebox
 import ttkbootstrap as ttk
@@ -34,7 +38,7 @@ from serialport import Serial
 from all_parameters import all_params
 from set_m_b_get_b import set_m
 from calibr_koef import calibration_koef
-from oporn_signal import entry_oporn_signal
+from oporn_signal import entry_oporn_signal, READ_TIMEOUT as oporn_read_timeout
 from calibration_loop import calibration_loop
 from five_degrees import initial_calibration
 from current_off import current_off
@@ -42,6 +46,15 @@ from program_logger import logger
 
 
 stop_thread = True
+
+PARAMETERS = deque()
+UZ_POLLING_TIMEOUT = 1
+
+
+# style = ttk.Style(theme="darkly")
+# style.configure("DebugFrame.TFrame", background="red")
+# style.configure("TEntryPlaceholder.TEntry", foreground="grey")
+
 
 curparam_coldata = [
     "Время",
@@ -133,7 +146,7 @@ class CurParamTable(Tableview):
         lbl.pack(side=RIGHT, padx=(0, 5))
         ttk.Label(pageframe, text=MessageCatalog.translate("of")).pack(side=RIGHT, padx=(5, 0))
 
-        index = ttk.Entry(pageframe, textvariable=self._pageindex, width=4)
+        index = tk.Entry(pageframe, textvariable=self._pageindex, width=4)
         index.pack(side=RIGHT)
         index.bind("<Return>", self.goto_page, "+")
         index.bind("<KP_Enter>", self.goto_page, "+")
@@ -179,17 +192,19 @@ def fill_combobox(e):
     e.widget["values"] = ports
 
 
-def fill_datatable(parameters: Iterable):
-    if len(parameters) != len(curparam_coldata) - 1:
-        raise AttributeError("Incorrect number of parameters was supplied for datatable")
-    datatable.insert_row(
-        values=[
-            datetime.now().strftime("%Y.%m.%d %H:%M:%S"),
-            *parameters
-        ]
-    )
-    if datatable.autoscroll.get():
-        datatable.after(100, datatable.goto_last_page)
+def fill_datatable():
+    while PARAMETERS:
+        parameters = PARAMETERS.popleft()
+        if len(parameters) != len(curparam_coldata) - 1:
+            raise AttributeError("Incorrect number of parameters was supplied for datatable")
+        datatable.insert_row(
+            values=[
+                datetime.now().strftime("%Y.%m.%d %H:%M:%S"),
+                *parameters
+            ]
+        )
+        if datatable.autoscroll.get():
+            datatable.after(10, datatable.goto_last_page)
     
 
 
@@ -199,7 +214,8 @@ def stream_param():
     except Exception as e:
         logger.warning(f"{e}")
         raise e
-    fill_datatable(parameters)
+    PARAMETERS.append(parameters)
+    fill_datatable()
     # for i, name in enumerate(NAME_PARAM):
     #     name.delete("1.0", "end")
         
@@ -207,22 +223,34 @@ def stream_param():
     #     name.insert("1.0", str(parameters[i]))
         
 
-def uz_polling_cycle():
-    while stop_thread:
-        try:
-            stream_param()
-        except ValueError as e:
-            logger.debug(f"{e}")
-            pass
-        except Exception as e:
-            logger.error(f"UZ polling cycle break {e}")
-            
-            messagebox.showerror(
-                "Ошибка",
-                (f"В цикле опроса анемоментра возникла ошибка. "
-                f"Для перезапуска закройте порт и откройте его повторно. \n{e}"))
-            break
-        sleep(1)
+def uz_polling_cycle(event: Event):
+    Thread(target=_uz_polling_cycle, args=(event,), daemon=True, name="UzPolling").start()
+    
+
+
+def _uz_polling_cycle(event: Event):
+    # while stop_thread:
+    identifier = root.after(int(UZ_POLLING_TIMEOUT * 1000), lambda: uz_polling_cycle(event))
+    try:
+        stream_param()
+    except ValueError as e:
+        logger.debug(f"{e}")
+        pass
+    except Exception as e:
+        logger.error(f"UZ polling cycle break {e}")
+        root.after_cancel(identifier)
+        messagebox.showerror(
+            "Ошибка",
+            (f"В цикле опроса анемоментра возникла ошибка. "
+            f"Для перезапуска закройте порт и откройте его повторно. \n{e}"))
+        return
+    event.set()
+
+
+def start_uz_polling():
+    continue_event = Event()
+    continue_event.set()
+    root.after(1, lambda: uz_polling_cycle(continue_event)) 
 
 
 def start_compolling():
@@ -242,7 +270,7 @@ def start_compolling():
     PORTS["port_js"] = port_js
     initial_calibration(port_js)
     display_version(get_version_call())
-    start_get_params_thread()
+    start_uz_polling()
     
 
 def start_get_params_thread():
@@ -337,13 +365,28 @@ def write_oporn_sign():
     
 
 def loader(end_event):
+    """Is not used
+
+    :param end_event: _description_
+    :type end_event: _type_
+    """
     while True:
         for i in ["\\", "|", "/", "—"]:
             sleep(1)
             if not end_event.is_set():
                 return
             end_write_oporn_var.set('Идет запись опорных сигналов ' + i)
+
+def loader(end_event):
+    sleep_timeout = oporn_read_timeout / 99
     
+    oporn_signal_status_bar.grid(row=0, column=1, padx=10, pady=1)
+    for i in range(1, 100):
+        root.after(10, lambda: oporn_signal_status_bar.configure(value=i))
+        if not end_event.is_set():
+            root.after(10, lambda: oporn_signal_status_bar.grid_forget())
+            return
+        sleep(sleep_timeout)
 
 def all_block(state: Literal["disabled", "normal"]):
     for i in ALL_BUTTONS:
@@ -421,6 +464,7 @@ class EntryWithPlaceholder(tk.Entry):
 
     def put_placeholder(self):
         self.insert(0, self.placeholder)
+        
         self['fg'] = self.placeholder_color
 
     def foc_in(self, *args):
@@ -472,7 +516,7 @@ class ComportFrame(ttk.Frame):
     ...
 
 
-root = ttk.Window(themename="united")
+root = ttk.Window(themename="darkly")
 root.title("Анемометр УЗ v.0.0.1b")
 
 # Установка размеров окна
@@ -507,9 +551,10 @@ velocity_angle_loop_frame = ttk.Frame(input_frame)
 # Создаем рамку для записи определенного угла и скорости
 velocity_angle_const_frame = ttk.Frame(input_frame)
 
-
 # Создаем рамку для записи опорных сигналов
-oporn_signal_frame = ttk.Frame(input_frame)
+oporn_signal_frame = ttk.Frame(input_frame, 
+                            #    style="DebugFrame.TFrame",
+                               height=40, width=500)
 
 # Создаем рамку для отключения тока удержания
 cur_off_frame = ttk.Frame(input_frame)
@@ -729,6 +774,8 @@ oporn_signal_button = InputFrameButton(oporn_signal_frame, text="Запись о
 # Создание окна для оповещения о завершении процесса записи опорных векторов
 end_write_oporn_var = tk.StringVar(oporn_signal_frame, f"здесь будет оповещение о завершении записи")
 end_write_oporn = ttk.Label(oporn_signal_frame, textvariable=end_write_oporn_var)
+oporn_signal_status_bar = ttk.Progressbar(
+    oporn_signal_frame, bootstyle=INFO, length=200)
 
 ##################################
 
@@ -748,7 +795,8 @@ datatable = CurParamTable(parameters_frame)
 
 
 def build_app():
-    comport_frame.grid(row=0, column=0, rowspan=4, padx=(10, 10))
+    comport_frame.grid(row=0, column=0, rowspan=4, 
+                       padx=(10, 10), pady=10, sticky="n")
     com_port_frame_separator.grid(row=0, column=1, sticky="ewns")
     main_interaction_frame.grid(row=0, column=2, padx=10, pady=10)
     build_comport_frame()
@@ -835,8 +883,9 @@ def build_parameters_frame():
 
 def build_input_frame():
     entry_b_m_frame.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="w")
-    velocity_angle_const_frame.grid(row=1, column=0, padx=10, pady=0, sticky="w")
-    oporn_signal_frame.grid(row=2, column=0, padx=10, pady=0, sticky="w")
+    velocity_angle_const_frame.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    oporn_signal_frame.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    # oporn_signal_frame.grid_propagate(False)
     velocity_angle_loop_frame.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
     cur_off_frame.grid(row=4, column=0, padx=10, pady=0, sticky="w")
 
@@ -857,7 +906,6 @@ def build_input_minor_frames():
     entry_angle_const.grid(row=0, column=2, padx=20, pady=1)
     output_c1_c2_text.grid(row=0, column=3, padx=0, pady=1)
     oporn_signal_button.grid(row=0, column=0, padx=10, pady=1)
-    end_write_oporn.grid(row=0, column=1, padx=10, pady=1)
     cur_off_button.grid(row=0, column=1, padx=10, pady=10)  
     cur_off_info.grid(row=0, column=2, padx=10, pady=10)
 

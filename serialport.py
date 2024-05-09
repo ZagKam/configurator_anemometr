@@ -13,6 +13,11 @@ if os.getenv("USERNAME") == "fahru":
         def __init__(self, *args, **kwargs):
             super().__init__()
             self.command = b''
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+            
         
         def read(self, command:bytes, *args, **kwargs):
             sleep(0.15)
@@ -22,7 +27,11 @@ if os.getenv("USERNAME") == "fahru":
         def write(self, command: bytes,  *args, **kwargs):
             self.command = command
 
-        def interact(*args, read_size, **kwargs):
+        def interact(self, *args, read_size, read_timeout=0, **kwargs):
+            if self.closed:
+                raise ConnectionError()
+            if read_timeout:
+                sleep(read_timeout)
             return  bytearray([round(random() * 255) for _ in range(read_size)])
 else:
 
