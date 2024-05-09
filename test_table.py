@@ -13,6 +13,7 @@ def profileit(func):
 
     return wrapper
 
+from collections import deque
 from random import random
 from threading import Thread
 from time import sleep, time
@@ -34,16 +35,20 @@ curparam_coldata = [
     "Т3",
     "Т4"
 ]
+
+dataqueue = deque()
+
 class CurParamTable(Tableview):
 
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args, 
             coldata=curparam_coldata,
-            rowdata=[],
+            # rowdata=[[random()*255 for _ in  range(len(curparam_coldata))] for i in range(20)],
             paginated=True,
             delimiter=",",
             **kwargs)
+        self.autoscroll = True
     
     
     def sort_by_date(self):
@@ -59,15 +64,20 @@ class CurParamTable(Tableview):
     
 
 def add_row():
-    for i in range(100):
+    while True:
         values = [int(time())]
         values.extend([round(random() * 255) for _ in range(len(curparam_coldata)-1)])
-
         dt.insert_row("end",
             values
         )
-        dt.sort_by_date()
+        root.after(100, refresher)
+        sleep(1)
+
+
+def refresher(*args):
+    dt.goto_last_page()
       
+
 
 
 

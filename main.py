@@ -23,6 +23,9 @@ from tkinter import messagebox
 import ttkbootstrap as ttk
 from ttkbootstrap.tableview import Tableview
 
+from ttkbootstrap.localization import MessageCatalog
+from ttkbootstrap.constants import *
+
 import serial
 
 from serial_ports import serial_ports
@@ -67,13 +70,75 @@ class InputFrameButton(Mutton):
 class CurParamTable(Tableview):
 
     def __init__(self, *args, **kwargs):
+        
+        self.autoscroll = tk.BooleanVar(root)
+        self.autoscroll.set(True)
         super().__init__(
             *args, 
             coldata=curparam_coldata,
             rowdata=[],
             paginated=True,
             delimiter=",",
+            autofit=True,
             **kwargs)
+        
+    def _build_pagination_frame(self):
+        """Build the frame containing the pagination widgets. This
+        frame is only built if `pagination=True` when creating the
+        widget.
+        """
+        pageframe = ttk.Frame(self)
+        pageframe.pack(fill=X, anchor=N)
+
+        ttk.Button(
+            pageframe,
+            text=MessageCatalog.translate("⎌"),
+            command=self.reset_table,
+            style="symbol.Link.TButton",
+        ).pack(side=RIGHT)
+
+        ttk.Separator(pageframe, orient=VERTICAL).pack(side=RIGHT, padx=10)
+        ttk.Checkbutton(pageframe, variable=self.autoscroll, text="Авто-прокрутка").pack(
+            side=LEFT, fill=Y
+        )
+        ttk.Button(
+            master=pageframe,
+            text="»",
+            command=self.goto_last_page,
+            style="symbol.Link.TButton",
+        ).pack(side=RIGHT, fill=Y)
+        ttk.Button(
+            master=pageframe,
+            text="›",
+            command=self.goto_next_page,
+            style="symbol.Link.TButton",
+        ).pack(side=RIGHT, fill=Y)
+
+        ttk.Button(
+            master=pageframe,
+            text="‹",
+            command=self.goto_prev_page,
+            style="symbol.Link.TButton",
+        ).pack(side=RIGHT, fill=Y)
+        ttk.Button(
+            master=pageframe,
+            text="«",
+            command=self.goto_first_page,
+            style="symbol.Link.TButton",
+        ).pack(side=RIGHT, fill=Y)
+
+        ttk.Separator(pageframe, orient=VERTICAL).pack(side=RIGHT, padx=10)
+
+        lbl = ttk.Label(pageframe, textvariable=self._pagelimit)
+        lbl.pack(side=RIGHT, padx=(0, 5))
+        ttk.Label(pageframe, text=MessageCatalog.translate("of")).pack(side=RIGHT, padx=(5, 0))
+
+        index = ttk.Entry(pageframe, textvariable=self._pageindex, width=4)
+        index.pack(side=RIGHT)
+        index.bind("<Return>", self.goto_page, "+")
+        index.bind("<KP_Enter>", self.goto_page, "+")
+
+        ttk.Label(pageframe, text=MessageCatalog.translate("Page")).pack(side=RIGHT, padx=5)
     
     
     def sort_by_date(self):
@@ -83,7 +148,7 @@ class CurParamTable(Tableview):
     def sort_column_data(self, event=None, cid=None, sort=None):
         return super().sort_column_data(event, cid, sort)
 
-
+    
 PORTS = {'port_uz':None,
          'port_js':None}
 
@@ -123,7 +188,8 @@ def fill_datatable(parameters: Iterable):
             *parameters
         ]
     )
-    datatable.sort_by_date()
+    if datatable.autoscroll.get():
+        datatable.after(100, datatable.goto_last_page)
     
 
 
