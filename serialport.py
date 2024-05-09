@@ -4,6 +4,7 @@ from time import sleep
 import serial
 import os
 from time import sleep
+from random import random
 
 if os.getenv("USERNAME") == "fahru":
 
@@ -20,6 +21,9 @@ if os.getenv("USERNAME") == "fahru":
             
         def write(self, command: bytes,  *args, **kwargs):
             self.command = command
+
+        def interact(*args, read_size, **kwargs):
+            return  bytearray([round(random() * 255) for _ in range(read_size)])
 else:
 
     class Serial(serial.Serial):

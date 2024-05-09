@@ -6,9 +6,10 @@ from date_time import time_now
 import os
 from time import sleep
 from program_logger import logger
+from typing import List, Iterable
 
 
-def all_params(ComPort:serial.Serial) -> None:
+def all_params(ComPort:serial.Serial) -> Iterable:
     """
     Функция для вывода значений  (m12, m21, m34, m43, t1, t2, t3, t4).
         

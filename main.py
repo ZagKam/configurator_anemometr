@@ -1,11 +1,27 @@
-from typing import Literal, Tuple
+import cProfile
+
+from pstats import Stats, SortKey
+
+def profileit(func):
+    def wrapper(*args, **kwargs):
+        with cProfile.Profile() as pr:
+            result = func(*args, **kwargs)
+        
+        Stats(pr).sort_stats(SortKey.TIME).print_stats(10) # sort by total execution time and limit output to 10 lines
+        return result
+
+    return wrapper
+
+
+from datetime import datetime
+from typing import Literal, Tuple, Iterable
 from time import sleep
 from threading import Thread
 from threading import Event
 import tkinter as tk
 from tkinter import messagebox
-from tkinter import ttk
 import ttkbootstrap as ttk
+from ttkbootstrap.tableview import Tableview
 
 import serial
 
@@ -21,8 +37,22 @@ from five_degrees import initial_calibration
 from current_off import current_off
 from program_logger import logger
 
+
 stop_thread = True
 
+curparam_coldata = [
+    "Время",
+    "Скорость",
+    "Направление",
+    "М12",
+    "М21",
+    "М34",
+    "М43",
+    "Т1",
+    "Т2",
+    "Т3",
+    "Т4"
+]
 
 class Mutton(ttk.Button):
     ...
@@ -32,6 +62,26 @@ class InputFrameButton(Mutton):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, width=28, **kwargs)
+
+
+class CurParamTable(Tableview):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args, 
+            coldata=curparam_coldata,
+            rowdata=[],
+            paginated=True,
+            delimiter=",",
+            **kwargs)
+    
+    
+    def sort_by_date(self):
+        self.sort_column_data(cid=0, sort=1)
+
+    @profileit
+    def sort_column_data(self, event=None, cid=None, sort=None):
+        return super().sort_column_data(event, cid, sort)
 
 
 PORTS = {'port_uz':None,
@@ -58,9 +108,23 @@ def open_ports_click(name_1:str, name_2: str) -> Tuple[Serial, Serial]:
     except serial.SerialException as e:
         raise e
 
+
 def fill_combobox(e):
     ports = serial_ports()
     e.widget["values"] = ports
+
+
+def fill_datatable(parameters: Iterable):
+    if len(parameters) != len(curparam_coldata) - 1:
+        raise AttributeError("Incorrect number of parameters was supplied for datatable")
+    datatable.insert_row(
+        values=[
+            datetime.now().strftime("%Y.%m.%d %H:%M:%S"),
+            *parameters
+        ]
+    )
+    datatable.sort_by_date()
+    
 
 
 def stream_param():
@@ -69,11 +133,12 @@ def stream_param():
     except Exception as e:
         logger.warning(f"{e}")
         raise e
-    for i, name in enumerate(NAME_PARAM):
-        name.delete("1.0", "end")
+    fill_datatable(parameters)
+    # for i, name in enumerate(NAME_PARAM):
+    #     name.delete("1.0", "end")
         
-    for i, name in enumerate(NAME_PARAM):
-        name.insert("1.0", str(parameters[i]))
+    # for i, name in enumerate(NAME_PARAM):
+    #     name.insert("1.0", str(parameters[i]))
         
 
 def uz_polling_cycle():
@@ -417,14 +482,15 @@ cur_off_title_label = ttk.Label(cur_off_frame)
 
 # Создание Combobox
 #values = serial_ports()
-combo1 = ttk.Combobox(comport_frame, width=22)
+combo_width = 22
+combo1 = ttk.Combobox(comport_frame, width=combo_width)
 combo1.bind('<Button-1>', fill_combobox)
 
 combo1.set("Выберите COMport №1")
 
 # Создание Combobox
 #values = serial_ports()
-combo2 = ttk.Combobox(comport_frame, width=22)
+combo2 = ttk.Combobox(comport_frame, width=combo_width)
 combo2.bind('<Button-1>', fill_combobox)
 
 combo2.set("Выберите COMport №2")
@@ -434,12 +500,12 @@ status_label = ttk.Label(comport_frame, textvariable=status)
 version_variable = tk.StringVar()
 # Создание кнопки и размещение с помощью grid
 button_open_port = Mutton(comport_frame, 
-                          text="Открыть порты", 
+                          text="Открыть порты", width=combo_width,
                           command=start_compolling)# print(get_version(open_ports_click(combo1.get()))))
 
 
 # Создание кнопки и размещение с помощью grid
-button_close_port = Mutton(comport_frame, text="Закрыть порты", command=close_ports_clicks)
+button_close_port = Mutton(comport_frame, width=combo_width, text="Закрыть порты", command=close_ports_clicks)
 
 
 # Создание окна вывода версии
@@ -607,6 +673,9 @@ cur_off_button = InputFrameButton(cur_off_frame, text="Отключение то
 end_write_curr_off_var = tk.StringVar(cur_off_frame, f"здесь будет оповещение об отключении тока")
 cur_off_info = ttk.Label(cur_off_frame, textvariable=end_write_curr_off_var)
 
+
+datatable = CurParamTable(parameters_frame)
+
 ##################################
 
 # Слева колонка для отображения портов, прошивки и некоторых статусов
@@ -615,10 +684,10 @@ cur_off_info = ttk.Label(cur_off_frame, textvariable=end_write_curr_off_var)
 def build_app():
     comport_frame.grid(row=0, column=0, rowspan=4, padx=(10, 10))
     com_port_frame_separator.grid(row=0, column=1, sticky="ewns")
-    main_interaction_frame.grid(row=0, column=2)
+    main_interaction_frame.grid(row=0, column=2, padx=10, pady=10)
     build_comport_frame()
     build_main_interaction_frame()
-    build_parameters_frame()
+    build_parameters_table()
     build_input_frame()
 
 
@@ -632,7 +701,6 @@ def build_comport_frame():
     button_close_port.grid(row=3, column=0)
     info_vers_label.grid(row=4, column=0, padx=0, pady=15)
     status_label.grid(row=5, column=0, sticky="sew")
-    
 
 
 def build_main_interaction_frame():
@@ -640,6 +708,10 @@ def build_main_interaction_frame():
     """
     input_frame.grid(row=0, column=0, sticky="w", ipadx=10)
     parameters_frame.grid(row=1, column=0, pady=10)
+
+
+def build_parameters_table():
+    datatable.grid(row=0, column=0)
 
 
 def build_parameters_frame():
@@ -696,10 +768,10 @@ def build_parameters_frame():
 
 
 def build_input_frame():
-    entry_b_m_frame.grid(row=0, column=0, padx=10, pady=10, sticky="w")
-    velocity_angle_loop_frame.grid(row=1, column=0, padx=10, pady=0, sticky="w")
-    velocity_angle_const_frame.grid(row=2, column=0, padx=10, pady=0, sticky="w")
-    oporn_signal_frame.grid(row=3, column=0, padx=10, pady=0, sticky="w")
+    entry_b_m_frame.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="w")
+    velocity_angle_const_frame.grid(row=1, column=0, padx=10, pady=0, sticky="w")
+    oporn_signal_frame.grid(row=2, column=0, padx=10, pady=0, sticky="w")
+    velocity_angle_loop_frame.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
     cur_off_frame.grid(row=4, column=0, padx=10, pady=0, sticky="w")
 
     build_input_minor_frames()
