@@ -1,5 +1,19 @@
 {
+    "log_level": 10,
     "current_off_command": "0110000e0001020000",
-    "motor_rotation_commmand": 
+    "current_off_answer_size": 8,
+    "motor_rotation_commmand": "0106001c0001",
+    "motor_configuration_command": "0110001a00020400b20000",
+    "motor_configuration_answer_size": 8,
+    "motor_rotation_answer_size": 8,
+    "motor_rotation_duration": 4,
+    "get_version_command": "3c0300010002",
+    "get_version_answer_size": 9,
+    "oporn_signal_set_duration": 4,
+    "oporn_signal_set_command": "3c0600000000",
+    "oporn_signal_set_answer_size": 8,
+    "calibration_koef_answer_size": 9,
+    "wind_velocity_coef_duration": 4,
+    "calibration_step_number": 71
 
 }

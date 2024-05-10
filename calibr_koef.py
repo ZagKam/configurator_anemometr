@@ -3,6 +3,8 @@ import struct
 from build_request import build_request
 from typing import Iterable, Union, Tuple
 
+from config import config
+
 def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> Tuple[float, float]:
     
     """
@@ -25,7 +27,7 @@ def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> Tuple[fl
     request = '3C04' + hex_velocity + hex_angle + '0002'
     byte_request = build_request(request)
     try:
-        raw_answer = ComPort.interact(byte_request, read_size=9)
+        raw_answer = ComPort.interact(byte_request, read_size=config["calibration_koef_answer_size"])
         if not raw_answer:
             return '-1'
         # ##### не проверена работоспособность кода преобразующего u16 в halffloat

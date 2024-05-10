@@ -2,6 +2,9 @@ import serial
 import struct
 import time
 
+from config import config
+from get_crc import get_crc
+
 READ_TIMEOUT = 40
 def current_off(ComPort:serial.Serial) -> bool:
     """
@@ -14,10 +17,10 @@ def current_off(ComPort:serial.Serial) -> bool:
         
         ПРМЕЧАНИЕ: Эта функция с шаговым двигателем
     """
-    byte_request = b'\x01\x10\x00\x0E\x00\x01\x02\x00\x00\xA7\x7E' 
+    byte_request = config["current_off_command"]
     
     try: 
-        answer = list(ComPort.interact(byte_request, read_size=8, read_timeout=READ_TIMEOUT))
+        answer = list(ComPort.interact(byte_request, read_size=config["current_off_answer_size"], read_timeout=READ_TIMEOUT))
         time.sleep(0.25)
     except Exception as e:
         print(e)

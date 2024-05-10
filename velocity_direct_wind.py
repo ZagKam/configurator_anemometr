@@ -1,6 +1,8 @@
 from serialport import Serial 
 import struct
+
 from build_request import build_request
+from config import config
 
 
 def wind_vel_direct(ComPort:Serial, velocity:str, angle:str) -> int:
@@ -17,7 +19,7 @@ def wind_vel_direct(ComPort:Serial, velocity:str, angle:str) -> int:
         - number_reg: int значение.
 
     """
-    request_process_duration = 4
+    request_process_duration = config["wind_velocity_coef_duration"]
     scaled_velocity = int(velocity)
     scaled_angle = int(angle)
     hex_velocity = format(scaled_velocity, '04X')

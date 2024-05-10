@@ -2,6 +2,8 @@ import serial
 import struct
 import time
 
+from config import config
+
 
 def get_version(ComPort:serial.Serial) -> int:
     """
@@ -12,7 +14,7 @@ def get_version(ComPort:serial.Serial) -> int:
     Возвращает: 
         - str версию газоанализатора.
     """
-    byte_request = b'\x3C\x03\x00\x01\x00\x02\x91\x26' 
+    byte_request = config["get_version_command"]
     answer = list(ComPort.interact(byte_request, read_size=9))
     time.sleep(0.25) 
     try:

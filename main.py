@@ -33,6 +33,7 @@ from ttkbootstrap.constants import *
 
 import serial
 
+from config import config
 from serial_ports import serial_ports
 from get_version import get_version
 from serialport import Serial
@@ -84,7 +85,8 @@ class CalibrationStatusWindow:
 
     def __init__(self, *args, **kwargs):
 
-        self.window = ttk.Toplevel(*args, title="Калибровка датчика", **kwargs)
+        self.window = ttk.Toplevel(*args, title="Калибровка датчика", 
+                                   topmost=True, **kwargs)
 
         self.meter = ttk.Meter(self.window,
                   metersize=360,
@@ -258,6 +260,8 @@ def fill_datatable():
         )
         if datatable.autoscroll.get():
             datatable.after(10, datatable.goto_last_page)
+            focus = root.focus_get()
+            root.after(10, lambda: focus.focus_set())
 
 
 def stream_param():
@@ -280,7 +284,7 @@ def uz_polling_cycle(event: Event):
     
 
 def _uz_polling_cycle(event: Event):
-    # while stop_thread:
+    
     identifier = root.after(int(UZ_POLLING_TIMEOUT * 1000), lambda: uz_polling_cycle(event))
     try:
         stream_param()
@@ -522,7 +526,7 @@ root = ttk.Window(themename="darkly")
 root.title("Анемометр УЗ v.0.0.1b")
 
 # Установка размеров окна
-root.geometry("1000x300")  # Ширина x Высота
+root.geometry("850x520")  # Ширина x Высота
 
 
 ################################
@@ -914,16 +918,6 @@ build_app()
 
 
 # Основной фрэйм
-
-
-
-
-
-
-
-
-
-
 
 
 NAME_PARAM = [parameters_vel_text,

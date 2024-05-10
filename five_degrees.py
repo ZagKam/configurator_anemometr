@@ -4,9 +4,10 @@ import time
 
 from serialport import Serial
 from program_logger import logger
+from config import config
 
 
-READ_TIMEOUT = 40
+READ_TIMEOUT = config["motor_rotation_duration"]
 def rotation_five_degree(ComPort: Serial) -> bool:
     """
     Функция для записи опорных сигналов.
@@ -18,10 +19,12 @@ def rotation_five_degree(ComPort: Serial) -> bool:
         
         ПРМЕЧАНИЕ: Эта функция с шаговым двигателем
     """
-    byte_request = b'\x01\x06\x00\x1C\x00\x01\x89\xCC' 
+    byte_request = config['motor_rotation_commmand']
     
     try: 
-        answer = list(ComPort.interact(byte_request, read_size=8, read_timeout=READ_TIMEOUT))
+        answer = list(ComPort.interact(byte_request, 
+                                       read_size=config["motor_rotation_answer_size"], 
+                                       read_timeout=READ_TIMEOUT))
         time.sleep(0.25)
     except Exception as e:
         logger.error(e)
@@ -33,6 +36,6 @@ def rotation_five_degree(ComPort: Serial) -> bool:
 def initial_calibration(port: Serial):
     """Make initial calibration for motor
     """
-    byte_request = b'\x01\x10\x00\x1A\x00\x02\x04\x00\xB2\x00\x00\xD2\xFB' 
-    answer = port.interact(byte_request, read_size=8)
+    byte_request = config["motor_configuration_command"]
+    answer = port.interact(byte_request, read_size=config["motor_configuration_answer_size"])
     logger.debug(f"For motor intial step was set {answer=}")

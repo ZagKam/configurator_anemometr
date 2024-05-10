@@ -2,7 +2,9 @@ import serial
 import struct
 import time
 
-READ_TIMEOUT = 40
+from config import config
+
+READ_TIMEOUT = config["oporn_signal_set_duration"]
 def entry_oporn_signal(ComPort:serial.Serial) -> bool:
     """
     Функция для записи опорных сигналов.
@@ -12,10 +14,12 @@ def entry_oporn_signal(ComPort:serial.Serial) -> bool:
     Возвращает: 
         - bool: когда приходит ответ, функция вернет True.
     """
-    byte_request = b'\x3C\x06\x00\x00\x00\x00\x8D\x27' 
+    byte_request = config["oporn_signal_set_command"] 
 
     try: 
-        answer = list(ComPort.interact(byte_request, read_size=8, read_timeout=READ_TIMEOUT))
+        answer = list(ComPort.interact(byte_request, 
+                                       read_size=config["oporn_signal_set_answer_size"], 
+                                       read_timeout=READ_TIMEOUT))
         time.sleep(0.25)
     except Exception as e:
         print(e)

@@ -1,6 +1,8 @@
 from logging import Logger
 import logging
 
+from config import config
+
 
 logger = Logger("__main__")
 stream_handler = logging.StreamHandler()
@@ -14,4 +16,4 @@ fileHandler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 logger.addHandler(fileHandler)
 
-logger.setLevel(logging.DEBUG)
+logger.setLevel(config["log_level"])
