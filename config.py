@@ -24,6 +24,7 @@ class Config(TypedDict):
     calibration_koef_answer_size: int
     calibration_step_number: int
     log_level: int
+    test: bool
 
     
 def convert_to_bytes(self):

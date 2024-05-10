@@ -9,11 +9,12 @@
     "motor_rotation_duration": 4,
     "get_version_command": "3c0300010002",
     "get_version_answer_size": 9,
-    "oporn_signal_set_duration": 4,
+    "oporn_signal_set_duration": 35,
     "oporn_signal_set_command": "3c0600000000",
     "oporn_signal_set_answer_size": 8,
     "calibration_koef_answer_size": 9,
-    "wind_velocity_coef_duration": 4,
-    "calibration_step_number": 71
+    "wind_velocity_coef_duration": 35,
+    "calibration_step_number": 72,
+    "test": false
 
 }

@@ -51,7 +51,7 @@ stop_thread = True
 
 PARAMETERS = deque()
 UZ_POLLING_TIMEOUT = 1
-
+IS_CALIBRATION = Event()
     
 PORTS = {'port_uz':None,
          'port_js':None}
@@ -79,6 +79,9 @@ curparam_coldata = [
 
 class Mutton(ttk.Button):
     ...
+    
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, bootstyle="dark", **kwargs)
 
 
 class CalibrationStatusWindow:
@@ -451,7 +454,8 @@ def start_calibration_cycle():
     """
     Start calibration cycle in a separate thread
     """
-    status.set("Калибровка началась")
+    if IS_CALIBRATION.is_set():
+        return
     Thread(target=_start_calibration_cycle, daemon=True, 
            name="CalibrationThread").start()
 
@@ -463,16 +467,22 @@ def _start_calibration_cycle():
         messagebox.showwarning("Ошибка ввода", "Введена некорректная скорость")
         return
     # Thread(target=calibration_status.show, daemon=True).start()
-    root.after(10, create_staus_window)
-    wind_velocity = int(wind_velocity)
-    PORTS["port_uz"].enter_calibration()
-    initial_calibration(PORTS["port_js"])
-    calibration_loop(ui_update, 
-                     wind_velocity, PORTS["port_uz"],
-                     PORTS["port_js"])
-    PORTS["port_uz"].exit_calibration()
-    status.set("Калибровка завершена")
-    messagebox.showinfo("Информация", "Цикл калибровки завершён")
+    
+    IS_CALIBRATION.set()
+    try:
+        root.after(10, create_staus_window)
+        wind_velocity = int(wind_velocity)
+        PORTS["port_uz"].enter_calibration()
+        initial_calibration(PORTS["port_js"])
+        calibration_loop(ui_update, 
+                        wind_velocity, PORTS["port_uz"],
+                        PORTS["port_js"])
+        PORTS["port_uz"].exit_calibration()
+        status.set("Калибровка завершена")
+        messagebox.showinfo("Информация", "Цикл калибровки завершён")
+    except Exception as e:
+        logger.error(e)
+    IS_CALIBRATION.clear()
     current_angle.set("")
 
 def create_staus_window():
@@ -520,9 +530,10 @@ def loader_curr(end_event):
 # Создание главного окна
 
 root = ttk.Window(themename="darkly")
-root.title("Анемометр УЗ v.0.0.1b")
+root.title("Анемометр УЗ v.0.0.2b")
 style = ttk.Style()
 style.configure("PlaceholderEntry.TEntry", foreground="grey")
+style.configure("DebugFrame.TFrame", background="green")
 
 # Установка размеров окна
 root.geometry("850x520")  # Ширина x Высота
@@ -544,7 +555,10 @@ input_frame = ttk.LabelFrame(main_interaction_frame,
 
 
 # Создаем рамку для содержания команды записи m и b
-entry_b_m_frame = ttk.Frame(input_frame)
+entry_b_m_frame = ttk.Frame(input_frame, 
+                            height=40,  
+                            width=800)
+entry_b_m_frame.grid_propagate(False)
 
 
 # Создаем рамку для цикла записи скорости под разными углами (0,5,10,15)
@@ -900,7 +914,9 @@ def build_input_frame():
 def build_input_minor_frames():
     input_m_b_button.grid(row=0, column=0, padx=10, pady=2)
     entry_m_b.grid(row=0, column=1)
-    output_m_b_text.grid(row=0, column=2, padx=(184, 0), pady=1) 
+    entry_b_m_frame.grid_columnconfigure(2, weight=1)
+    output_m_b_text.grid(row=0, column=3, padx=(10, 0), pady=1, sticky="e") 
+
 
     velocity_angle_loop_button.grid(row=0, column=0, padx=10, pady=1)
     entry_velocity_angle.grid(row=0, column=1)

@@ -1,8 +1,8 @@
 from pathlib import Path
-import os
+import sys
 
 
 def resource_path(path: Path) -> Path:
-    if os.getenv("_MEIPASS"):
-        return Path(os.getenv("_MEIPASS") / path)
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        return Path(sys._MEIPASS) / path
     return path

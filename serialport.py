@@ -5,8 +5,9 @@ import serial
 import os
 from time import sleep
 from random import random
+from config import config
 
-if os.getenv("USERNAME") == "fahru":
+if config["test"]:
 
     class Serial(Mock):
         
