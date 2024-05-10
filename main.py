@@ -104,8 +104,6 @@ class CalibrationStatusWindow:
         self.table.pack()
 
 
-
-
 class InputFrameButton(Mutton):
 
     def __init__(self, *args, **kwargs):
@@ -193,13 +191,11 @@ class CurParamTable(Tableview):
         return super().sort_column_data(event, cid, sort)
 
 
-class EntryWithPlaceholder(tk.Entry):
-    def __init__(self, master=None, color='grey', placeholder="PLACEHOLDER", *args, **kwargs):
+class EntryWithPlaceholder(ttk.Entry):
+    def __init__(self, master=None, placeholder="", *args, **kwargs):
         super().__init__(master, *args, **kwargs)
 
         self.placeholder = placeholder
-        self.placeholder_color = color
-        self.default_fg_color = self['fg']
 
         self.bind("<FocusIn>", self.foc_in)
         self.bind("<FocusOut>", self.foc_out)
@@ -209,12 +205,12 @@ class EntryWithPlaceholder(tk.Entry):
     def put_placeholder(self):
         self.insert(0, self.placeholder)
         
-        self['fg'] = self.placeholder_color
+        self.configure(style="PlaceholderEntry.TEntry")
 
     def foc_in(self, *args):
-        if self['fg'] == self.placeholder_color:
+        if self.get() == self.placeholder:
             self.delete('0', 'end')
-            self['fg'] = self.default_fg_color
+            self.configure(style="TEntry")
 
     def foc_out(self, *args):
         if not self.get():
@@ -508,7 +504,7 @@ def cur_off():
     end_event = Event()
     end_event.set()
     Thread(target=_cur_off, args=(end_event,), daemon=True).start()
-    Thread(target=loader_curr, args=(end_event,), daemon=True).start()
+    # Thread(target=loader_curr, args=(end_event,), daemon=True).start()
 
 
 def loader_curr(end_event):
@@ -520,10 +516,13 @@ def loader_curr(end_event):
             end_write_curr_off_var.set('Отключение тока ' + i)
 
 
+
 # Создание главного окна
 
 root = ttk.Window(themename="darkly")
 root.title("Анемометр УЗ v.0.0.1b")
+style = ttk.Style()
+style.configure("PlaceholderEntry.TEntry", foreground="grey")
 
 # Установка размеров окна
 root.geometry("850x520")  # Ширина x Высота
@@ -789,6 +788,8 @@ cur_off_button = InputFrameButton(cur_off_frame, text="Отключение то
 # Создание окна для оповещения о завершении процесса записи опорных векторов
 end_write_curr_off_var = tk.StringVar(cur_off_frame, f"здесь будет оповещение об отключении тока")
 cur_off_info = ttk.Label(cur_off_frame, textvariable=end_write_curr_off_var)
+cur_off_status_bar = ttk.Progressbar(
+    cur_off_frame, bootstyle=INFO, length=200)
 
 
 datatable = CurParamTable(parameters_frame, coldata=curparam_coldata)
@@ -899,7 +900,7 @@ def build_input_frame():
 def build_input_minor_frames():
     input_m_b_button.grid(row=0, column=0, padx=10, pady=2)
     entry_m_b.grid(row=0, column=1)
-    output_m_b_text.grid(row=0, column=2, padx=20, pady=1) 
+    output_m_b_text.grid(row=0, column=2, padx=(184, 0), pady=1) 
 
     velocity_angle_loop_button.grid(row=0, column=0, padx=10, pady=1)
     entry_velocity_angle.grid(row=0, column=1)
@@ -908,10 +909,10 @@ def build_input_minor_frames():
     velocity_angle_const_button.grid(row=0, column=0, padx=10, pady=1)
     entry_velocity_const.grid(row=0, column=1)
     entry_angle_const.grid(row=0, column=2, padx=20, pady=1)
-    output_c1_c2_text.grid(row=0, column=3, padx=0, pady=1)
+    output_c1_c2_text.grid(row=0, column=3, padx=(10, 0), pady=1)
     oporn_signal_button.grid(row=0, column=0, padx=10, pady=1)
     cur_off_button.grid(row=0, column=1, padx=10, pady=10)  
-    cur_off_info.grid(row=0, column=2, padx=10, pady=10)
+    # cur_off_info.grid(row=0, column=2, padx=10, pady=10)
 
 
 build_app()
