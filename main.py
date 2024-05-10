@@ -26,6 +26,7 @@ import tkinter as tk
 from tkinter import messagebox
 import ttkbootstrap as ttk
 from ttkbootstrap.tableview import Tableview
+from ttkbootstrap.dialogs import Dialog
 
 from ttkbootstrap.localization import MessageCatalog
 from ttkbootstrap.constants import *
@@ -50,6 +51,10 @@ stop_thread = True
 PARAMETERS = deque()
 UZ_POLLING_TIMEOUT = 1
 
+    
+PORTS = {'port_uz':None,
+         'port_js':None}
+
 
 # style = ttk.Style(theme="darkly")
 # style.configure("DebugFrame.TFrame", background="red")
@@ -70,8 +75,33 @@ curparam_coldata = [
     "Т4"
 ]
 
+
 class Mutton(ttk.Button):
     ...
+
+
+class CalibrationStatusWindow:
+
+    def __init__(self, *args, **kwargs):
+
+        self.window = ttk.Toplevel(*args, title="Калибровка датчика", **kwargs)
+
+        self.meter = ttk.Meter(self.window,
+                  metersize=360,
+                  # arcrange=360,
+                  amounttotal=360,
+                  padding=5,
+                  amountused=0,
+                  metertype="full",
+                  subtext="Текущий угол")
+        self.meter.pack()
+        self.table = CurParamTable(
+            self.window, 
+            coldata=["Время", "Угол", "C1", "C2"]
+        )
+        self.table.pack()
+
+
 
 
 class InputFrameButton(Mutton):
@@ -88,7 +118,6 @@ class CurParamTable(Tableview):
         self.autoscroll.set(True)
         super().__init__(
             *args, 
-            coldata=curparam_coldata,
             rowdata=[],
             paginated=True,
             delimiter=",",
@@ -161,9 +190,33 @@ class CurParamTable(Tableview):
     def sort_column_data(self, event=None, cid=None, sort=None):
         return super().sort_column_data(event, cid, sort)
 
-    
-PORTS = {'port_uz':None,
-         'port_js':None}
+
+class EntryWithPlaceholder(tk.Entry):
+    def __init__(self, master=None, color='grey', placeholder="PLACEHOLDER", *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+
+        self.placeholder = placeholder
+        self.placeholder_color = color
+        self.default_fg_color = self['fg']
+
+        self.bind("<FocusIn>", self.foc_in)
+        self.bind("<FocusOut>", self.foc_out)
+
+        self.put_placeholder()
+
+    def put_placeholder(self):
+        self.insert(0, self.placeholder)
+        
+        self['fg'] = self.placeholder_color
+
+    def foc_in(self, *args):
+        if self['fg'] == self.placeholder_color:
+            self.delete('0', 'end')
+            self['fg'] = self.default_fg_color
+
+    def foc_out(self, *args):
+        if not self.get():
+            self.put_placeholder()
 
 
 def open_ports_click(name_1:str, name_2: str) -> Tuple[Serial, Serial]:
@@ -205,7 +258,6 @@ def fill_datatable():
         )
         if datatable.autoscroll.get():
             datatable.after(10, datatable.goto_last_page)
-    
 
 
 def stream_param():
@@ -226,7 +278,6 @@ def stream_param():
 def uz_polling_cycle(event: Event):
     Thread(target=_uz_polling_cycle, args=(event,), daemon=True, name="UzPolling").start()
     
-
 
 def _uz_polling_cycle(event: Event):
     # while stop_thread:
@@ -377,6 +428,7 @@ def loader(end_event):
                 return
             end_write_oporn_var.set('Идет запись опорных сигналов ' + i)
 
+
 def loader(end_event):
     sleep_timeout = oporn_read_timeout / 99
     
@@ -387,6 +439,7 @@ def loader(end_event):
             root.after(10, lambda: oporn_signal_status_bar.grid_forget())
             return
         sleep(sleep_timeout)
+
 
 def all_block(state: Literal["disabled", "normal"]):
     for i in ALL_BUTTONS:
@@ -404,10 +457,13 @@ def start_calibration_cycle():
 
 
 def _start_calibration_cycle():
+    global calibration_status
     wind_velocity = entry_velocity_angle.get().strip()
     if not wind_velocity.isdigit():
         messagebox.showwarning("Ошибка ввода", "Введена некорректная скорость")
         return
+    # Thread(target=calibration_status.show, daemon=True).start()
+    root.after(10, create_staus_window)
     wind_velocity = int(wind_velocity)
     PORTS["port_uz"].enter_calibration()
     initial_calibration(PORTS["port_js"])
@@ -419,8 +475,17 @@ def _start_calibration_cycle():
     messagebox.showinfo("Информация", "Цикл калибровки завершён")
     current_angle.set("")
 
+def create_staus_window():
+    global calibration_status
+    calibration_status = CalibrationStatusWindow()
 
-def ui_update(wind_velocity: int, angle: int):
+
+def ui_update(wind_velocity: int, angle: int, c1, c2):
+    calibration_status.table.insert_row(
+        values=[datetime.now(), angle, c1, c2]
+    )
+    root.after(10, calibration_status.table.goto_last_page)
+    calibration_status.meter.amountusedvar.set(angle)
     current_angle.set(f"{wind_velocity}м/c,  {angle}"+b'\xc2\xb0'.decode("utf8") )
 
 
@@ -433,12 +498,14 @@ def _cur_off(end_event: Event):
     all_block('normal')
     end_event.clear()
 
+
 def cur_off():
     all_block('disabled')
     end_event = Event()
     end_event.set()
     Thread(target=_cur_off, args=(end_event,), daemon=True).start()
     Thread(target=loader_curr, args=(end_event,), daemon=True).start()
+
 
 def loader_curr(end_event):
     while True:
@@ -449,72 +516,7 @@ def loader_curr(end_event):
             end_write_curr_off_var.set('Отключение тока ' + i)
 
 
-class EntryWithPlaceholder(tk.Entry):
-    def __init__(self, master=None, color='grey', placeholder="PLACEHOLDER", *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
-
-        self.placeholder = placeholder
-        self.placeholder_color = color
-        self.default_fg_color = self['fg']
-
-        self.bind("<FocusIn>", self.foc_in)
-        self.bind("<FocusOut>", self.foc_out)
-
-        self.put_placeholder()
-
-    def put_placeholder(self):
-        self.insert(0, self.placeholder)
-        
-        self['fg'] = self.placeholder_color
-
-    def foc_in(self, *args):
-        if self['fg'] == self.placeholder_color:
-            self.delete('0', 'end')
-            self['fg'] = self.default_fg_color
-
-    def foc_out(self, *args):
-        if not self.get():
-            self.put_placeholder()
-
-
-# def show_tooltip(text):
-#     tooltip_label.config(text=text)
-#     tooltip_label.place(relx=0.5, rely=0.5, anchor="center")
-
-# def hide_tooltip():
-#     tooltip_label.place_forget()
-
-# def create_tooltip(widget, text):
-#     widget.bind("<Enter>", lambda event: show_tooltip(text))
-#     widget.bind("<Leave>", lambda event: hide_tooltip())
-    
-    
-    
-
-
-
-
-
-    
-    
-def show_message():
-    messagebox.showinfo("Сообщение", "Вы нажали кнопку!")
-
-def get_input():
-    messagebox.showinfo("", 'нажали кнопку')
-
-def check_state():
-    if var.get() == 1:
-        messagebox.showinfo("Чекбокс", "Чекбокс отмечен")
-    else:
-        messagebox.showinfo("Чекбокс", "Чекбокс не отмечен")
-
 # Создание главного окна
-
-class ComportFrame(ttk.Frame):
-    
-    ...
-
 
 root = ttk.Window(themename="darkly")
 root.title("Анемометр УЗ v.0.0.1b")
@@ -524,8 +526,6 @@ root.geometry("1000x300")  # Ширина x Высота
 
 
 ################################
-
-
 
 # Создаем рамку для содержания выбора и подключения COMport
 comport_frame = ttk.Frame(root)
@@ -787,7 +787,7 @@ end_write_curr_off_var = tk.StringVar(cur_off_frame, f"здесь будет о�
 cur_off_info = ttk.Label(cur_off_frame, textvariable=end_write_curr_off_var)
 
 
-datatable = CurParamTable(parameters_frame)
+datatable = CurParamTable(parameters_frame, coldata=curparam_coldata)
 
 ##################################
 

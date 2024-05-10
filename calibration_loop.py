@@ -23,5 +23,5 @@ def calibration_loop(ui_update: callable, wind_velocity: int, port_uz: Serial,
         
         add_line(c1, c2)
         # также здесь должен быть вывод угла на экран конфигуратора, угл и скорость
-        ui_update(wind_velocity, angle )
+        ui_update(wind_velocity, angle, c1, c2)
         rotation_five_degree(port_js)

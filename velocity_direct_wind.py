@@ -17,7 +17,7 @@ def wind_vel_direct(ComPort:Serial, velocity:str, angle:str) -> int:
         - number_reg: int значение.
 
     """
-    request_process_duration = 40
+    request_process_duration = 4
     scaled_velocity = int(velocity)
     scaled_angle = int(angle)
     hex_velocity = format(scaled_velocity, '04X')
