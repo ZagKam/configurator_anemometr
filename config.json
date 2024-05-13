@@ -15,6 +15,7 @@
     "calibration_koef_answer_size": 9,
     "wind_velocity_coef_duration": 35,
     "calibration_step_number": 72,
+    "poll_timeout": 980,
     "test": false
 
 }

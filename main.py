@@ -33,6 +33,7 @@ from ttkbootstrap.constants import *
 
 import serial
 
+from typing import Dict
 from config import config
 from serial_ports import serial_ports
 from get_version import get_version
@@ -55,6 +56,8 @@ IS_CALIBRATION = Event()
     
 PORTS = {'port_uz':None,
          'port_js':None}
+
+SCHEDULER: Dict[str, int]= {"task": None}
 
 
 # style = ttk.Style(theme="darkly")
@@ -225,13 +228,13 @@ def open_ports_click(name_1:str, name_2: str) -> Tuple[Serial, Serial]:
         global stop_thread
         stop_thread = True
         try:
-            ComPort1 = Serial(name_1, 19200, timeout=1)
+            ComPort1 = Serial(name_1, 19200, timeout=0.5)
         except Exception as e:
             
             logger.warning(f"Не удалось открыть порт {name_1}: Проверьте подключение.")
             raise serial.SerialException(f"Не удалось открыть порт {name_1}: Проверьте подключение.")
         try:
-            ComPort2 = Serial(name_2, 38400, timeout=1)
+            ComPort2 = Serial(name_2, 38400, timeout=0.5)
         except Exception as e:
             logger.warning(f"Не удалось открыть порт {name_2}: Проверьте подключение.")
             ComPort1.close()
@@ -278,13 +281,18 @@ def stream_param():
     #     name.insert("1.0", str(parameters[i]))
         
 
-def uz_polling_cycle(event: Event):
-    Thread(target=_uz_polling_cycle, args=(event,), daemon=True, name="UzPolling").start()
+def uz_polling_cycle(continue_event: Event, stop_event: Event):
+    Thread(target=_uz_polling_cycle, args=(continue_event, stop_event), daemon=True, name="UzPolling").start()
     
 
-def _uz_polling_cycle(event: Event):
-    
-    identifier = root.after(int(UZ_POLLING_TIMEOUT * 1000), lambda: uz_polling_cycle(event))
+def _uz_polling_cycle(continue_event: Event, stop_event: Event):
+    continue_event.wait()
+    if stop_event.is_set():
+        logger.info("Break uz polling cycle")
+        return
+    continue_event.clear()
+    identifier = root.after(int(UZ_POLLING_TIMEOUT * config["poll_timeout"]), 
+                            lambda: uz_polling_cycle(continue_event, stop_event))
     try:
         stream_param()
     except ValueError as e:
@@ -298,13 +306,17 @@ def _uz_polling_cycle(event: Event):
             (f"В цикле опроса анемоментра возникла ошибка. "
             f"Для перезапуска закройте порт и откройте его повторно. \n{e}"))
         return
-    event.set()
+    finally:
+        continue_event.set()
 
 
 def start_uz_polling():
+    global continue_event, stop_event
     continue_event = Event()
     continue_event.set()
-    root.after(1, lambda: uz_polling_cycle(continue_event)) 
+    stop_event = Event()
+    stop_event.clear()
+    root.after(1, lambda: uz_polling_cycle(continue_event, stop_event)) 
 
 
 def start_compolling():
@@ -346,8 +358,7 @@ def get_version_call() -> str:
     
 def close_ports_clicks():
     try:
-        global stop_thread
-        stop_thread = False
+        stop_event.set()
         PORTS["port_uz"].close()
         PORTS["port_js"].close()
         combo2.set("Выберете COMport №2")
@@ -462,7 +473,7 @@ def start_calibration_cycle():
 
 def _start_calibration_cycle():
     global calibration_status
-    wind_velocity = entry_velocity_angle.get().strip()
+    wind_velocity = entry_velocity_angle.get().strip().replace(",", ".")
     if not wind_velocity.isdigit():
         messagebox.showwarning("Ошибка ввода", "Введена некорректная скорость")
         return
@@ -555,10 +566,10 @@ input_frame = ttk.LabelFrame(main_interaction_frame,
 
 
 # Создаем рамку для содержания команды записи m и b
-entry_b_m_frame = ttk.Frame(input_frame, 
-                            height=40,  
-                            width=800)
-entry_b_m_frame.grid_propagate(False)
+entry_b_m_frame = ttk.Frame(input_frame) 
+                            # height=40,  
+                            # width=800)
+# entry_b_m_frame.grid_propagate(False)
 
 
 # Создаем рамку для цикла записи скорости под разными углами (0,5,10,15)

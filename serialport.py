@@ -6,6 +6,7 @@ import os
 from time import sleep
 from random import random
 from config import config
+from program_logger import logger
 
 if config["test"]:
 
@@ -54,7 +55,7 @@ else:
             raise PermissionError("The method is private. Use interact instead")
         
         def interact(self, *args, read_size=0,
-                    read_timeout=1, **kwargs):
+                    read_timeout=0.4, **kwargs) -> bytes:
             """During calibration only CalibrationThread named thread can 
             interact with the port
 
@@ -67,18 +68,21 @@ else:
             """
             with self.mutex:
                 if self._is_calibration and current_thread().name != "CalibrationThread":
-                    return
+                    return b"" 
                 inwaiting = self.in_waiting
                 if inwaiting:
+                    logger.debug(f"{inwaiting=}")
                     print(f"Unxpected bytes on port {self.read(inwaiting)}")
                 super().write(*args, **kwargs)
                 sleep(0.05)
                 if self.timeout != read_timeout:
                     self.timeout = read_timeout
                 if read_size:
-                    return super().read(read_size)
-                super().read_all()
+                    ans = super().read(read_size)
+                else:
+                    ans =  super().read_all()
                 sleep(0.05)
+                return ans
 
 #from serial import Serial
 

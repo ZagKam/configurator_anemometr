@@ -25,6 +25,7 @@ class Config(TypedDict):
     calibration_step_number: int
     log_level: int
     test: bool
+    poll_timeout: int
 
     
 def convert_to_bytes(self):
