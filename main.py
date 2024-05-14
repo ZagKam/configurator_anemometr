@@ -37,7 +37,7 @@ from typing import Dict
 from config import config
 from serial_ports import serial_ports
 from get_version import get_version
-from serialport import Serial
+from serialport import Serial, SerialMock
 from all_parameters import all_params
 from set_m_b_get_b import set_m
 from calibr_koef import calibration_koef
@@ -101,7 +101,7 @@ class CalibrationStatusWindow:
                   padding=5,
                   amountused=0,
                   metertype="full",
-                  subtext="Текущий угол")
+                  subtext="Угол обработан")
         self.meter.pack()
         self.table = CurParamTable(
             self.window, 
@@ -195,6 +195,41 @@ class CurParamTable(Tableview):
     @profileit
     def sort_column_data(self, event=None, cid=None, sort=None):
         return super().sort_column_data(event, cid, sort)
+    
+    def save_data_to_csv(self, headers, records, delimiter=","):
+        """Save data records to a csv file.
+
+        Parameters:
+
+            headers (List[str]):
+                A list of header labels.
+
+            records (List[Tuple[...]]):
+                A list of table records.
+
+            delimiter (str):
+                The character to use for delimiting the values.
+        """
+        from tkinter.filedialog import asksaveasfilename
+        import csv
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        initialfile = f"tabledata_{timestamp}.csv"
+        filetypes = [
+            ("CSV UTF-8 (Comma delimited)", "*.csv"),
+            ("All file types", "*.*"),
+        ]
+        filename = asksaveasfilename(
+            confirmoverwrite=True,
+            filetypes=filetypes,
+            defaultextension="csv",
+            initialfile=initialfile,
+        )
+        if filename:
+            with open(filename, "w", encoding=config["export_encoding"], newline="") as f:
+                writer = csv.writer(f, delimiter=delimiter)
+                writer.writerow(headers)
+                writer.writerows(records)
 
 
 class EntryWithPlaceholder(ttk.Entry):
@@ -235,10 +270,12 @@ def open_ports_click(name_1:str, name_2: str) -> Tuple[Serial, Serial]:
             raise serial.SerialException(f"Не удалось открыть порт {name_1}: Проверьте подключение.")
         try:
             ComPort2 = Serial(name_2, 38400, timeout=0.5)
+            build_rotating_table_interface()
         except Exception as e:
             logger.warning(f"Не удалось открыть порт {name_2}: Проверьте подключение.")
-            ComPort1.close()
-            raise serial.SerialException(f"Не удалось открыть порт {name_2}: Проверьте подключение.")
+            ComPort2 = SerialMock()
+            forget_rotating_table()
+            
         return ComPort1, ComPort2
     except serial.SerialException as e:
         raise e
@@ -249,21 +286,23 @@ def fill_combobox(e):
     e.widget["values"] = ports
 
 
-def fill_datatable():
-    while PARAMETERS:
-        parameters = PARAMETERS.popleft()
-        if len(parameters) != len(curparam_coldata) - 1:
-            raise AttributeError("Incorrect number of parameters was supplied for datatable")
-        datatable.insert_row(
-            values=[
-                datetime.now().strftime("%Y.%m.%d %H:%M:%S"),
-                *parameters
-            ]
-        )
-        if datatable.autoscroll.get():
-            datatable.after(10, datatable.goto_last_page)
-            focus = root.focus_get()
-            root.after(10, lambda: focus.focus_set())
+# def fill_datatable():
+#     while PARAMETERS:
+#         parameters = PARAMETERS.popleft()
+#         if len(parameters) != len(curparam_coldata) - 1:
+#             raise AttributeError("Incorrect number of parameters was supplied for datatable")
+#         datatable.insert_row(
+#             values=[
+#                 datetime.now().strftime("%Y.%m.%d %H:%M:%S"),
+#                 *parameters
+#             ],
+#             index=0
+#         )
+        
+#         if datatable.autoscroll.get():
+#             datatable.after(10, datatable.goto_first_page)
+#             focus = root.focus_get()
+#             root.after(10, lambda: focus.focus_set())
 
 
 def stream_param():
@@ -273,12 +312,12 @@ def stream_param():
         logger.warning(f"{e}")
         raise e
     PARAMETERS.append(parameters)
-    fill_datatable()
-    # for i, name in enumerate(NAME_PARAM):
-    #     name.delete("1.0", "end")
+    #fill_datatable()
+    for i, name in enumerate(NAME_PARAM):
+        name.delete("1.0", "end")
         
-    # for i, name in enumerate(NAME_PARAM):
-    #     name.insert("1.0", str(parameters[i]))
+    for i, name in enumerate(NAME_PARAM):
+        name.insert("1.0", str(parameters[i]))
         
 
 def uz_polling_cycle(continue_event: Event, stop_event: Event):
@@ -361,7 +400,7 @@ def close_ports_clicks():
         stop_event.set()
         PORTS["port_uz"].close()
         PORTS["port_js"].close()
-        combo2.set("Выберете COMport №2")
+        combo2.set("Выберете COMport")
         #thread_param.join()
         for i, name in enumerate(NAME_PARAM):
             name.delete("1.0", "end")
@@ -473,7 +512,7 @@ def start_calibration_cycle():
 
 def _start_calibration_cycle():
     global calibration_status
-    wind_velocity = entry_velocity_angle.get().strip().replace(",", ".")
+    wind_velocity = entry_velocity_angle.get().strip()
     if not wind_velocity.isdigit():
         messagebox.showwarning("Ошибка ввода", "Введена некорректная скорость")
         return
@@ -541,13 +580,13 @@ def loader_curr(end_event):
 # Создание главного окна
 
 root = ttk.Window(themename="darkly")
-root.title("Анемометр УЗ v.0.0.2b")
+root.title("Конфигуратор Анемометр УЗ v.0.0.5")
 style = ttk.Style()
 style.configure("PlaceholderEntry.TEntry", foreground="grey")
 style.configure("DebugFrame.TFrame", background="green")
 
 # Установка размеров окна
-root.geometry("850x520")  # Ширина x Высота
+root.geometry("870x500")  # Ширина x Высота
 
 
 ################################
@@ -625,14 +664,14 @@ combo_width = 22
 combo1 = ttk.Combobox(comport_frame, width=combo_width)
 combo1.bind('<Button-1>', fill_combobox)
 
-combo1.set("Выберите COMport №1")
+combo1.set("COMport аненмометра")
 
 # Создание Combobox
 #values = serial_ports()
 combo2 = ttk.Combobox(comport_frame, width=combo_width)
 combo2.bind('<Button-1>', fill_combobox)
 
-combo2.set("Выберите COMport №2")
+combo2.set("COMport двигателя")
 
 status = tk.StringVar(comport_frame)
 status_label = ttk.Label(comport_frame, textvariable=status)
@@ -654,41 +693,41 @@ info_vers_label = tk.Label(comport_frame, textvariable=version_variable)
 ##############################
 
 # окно вывода скорости
-vel_label = ttk.Label(parameters_frame, text="Отображение скорости ветра")
+vel_label = ttk.Label(parameters_frame, text="Скорость ветра")
 
 parameters_vel_text = ttk.Text(parameters_frame)
 parameters_vel_text.configure(width=15, height=1)
 
 # окно вывода угла
-angle_label = ttk.Label(parameters_frame, text="Отображение угла")
+angle_label = ttk.Label(parameters_frame, text="Угол")
 
 parameters_angle_text = ttk.Text(parameters_frame)
 parameters_angle_text.configure(width=15, height=1)
 
 
 # окно вывода m12
-m12_label = tk.Label(parameters_frame, text="Отображение m12")
+m12_label = tk.Label(parameters_frame, text="m12")
 
 parameters_m12_text = ttk.Text(parameters_frame)
 parameters_m12_text.configure(width=15, height=1)
 
 
 # окно вывода m21
-m21_label = ttk.Label(parameters_frame, text="Отображение m21")
+m21_label = ttk.Label(parameters_frame, text="m21")
 
 parameters_m21_text = ttk.Text(parameters_frame)
 parameters_m21_text.configure(width=15, height=1)
 
 
 # окно вывода m34
-m34_label = ttk.Label(parameters_frame, text="Отображение m34")
+m34_label = ttk.Label(parameters_frame, text="m34")
 
 parameters_m34_text = ttk.Text(parameters_frame)
 parameters_m34_text.configure(width=15, height=1)
 
 
 # окно вывода m43
-m43_label = ttk.Label(parameters_frame, text="Отображение m43")
+m43_label = ttk.Label(parameters_frame, text="m43")
 
 parameters_m43_text = ttk.Text(parameters_frame)
 parameters_m43_text.configure(width=15, height=1)
@@ -696,7 +735,7 @@ parameters_m43_text.configure(width=15, height=1)
 
 
 # окно вывода t1
-t1_label = ttk.Label(parameters_frame, text="Отображение t1")
+t1_label = ttk.Label(parameters_frame, text="t1")
 
 parameters_t1_text = ttk.Text(parameters_frame)
 parameters_t1_text.configure(width=15, height=1)
@@ -704,7 +743,7 @@ parameters_t1_text.configure(width=15, height=1)
 
 
 # окно вывода t2
-t2_label = ttk.Label(parameters_frame, text="Отображение t2")
+t2_label = ttk.Label(parameters_frame, text="t2")
 
 parameters_t2_text = ttk.Text(parameters_frame)
 parameters_t2_text.configure(width=15, height=1)
@@ -713,7 +752,7 @@ parameters_t2_text.configure(width=15, height=1)
 
 
 # окно вывода t3
-t3_label = ttk.Label(parameters_frame, text="Отображение t3")
+t3_label = ttk.Label(parameters_frame, text="t3")
 
 parameters_t3_text = ttk.Text(parameters_frame)
 parameters_t3_text.configure(width=15, height=1)
@@ -722,7 +761,7 @@ parameters_t3_text.configure(width=15, height=1)
 
 
 # окно вывода t4
-t4_label = ttk.Label(parameters_frame, text="Отображение t4")
+t4_label = ttk.Label(parameters_frame, text="t4")
 
 parameters_t4_text = tk.Text(parameters_frame)
 parameters_t4_text.configure(width=15, height=1)
@@ -831,7 +870,8 @@ def build_app():
     main_interaction_frame.grid(row=0, column=2, padx=10, pady=10)
     build_comport_frame()
     build_main_interaction_frame()
-    build_parameters_table()
+    build_parameters_frame()
+    # build_parameters_table()
     build_input_frame()
 
 
@@ -865,30 +905,30 @@ def build_parameters_frame():
         row=0, column=0, padx=0, pady=0)
     vel_label.grid(
         row=1, column=0, pady=(5,25))
-    
-    parameters_angle_text.grid(
-        row=0, column=1, padx=0, pady=0)
-    angle_label.grid(
-        row=1, column=1, pady=(5,25))
 
     parameters_m12_text.grid(
-        row=0, column=2, padx=15, pady=0)
+        row=0, column=1, padx=15, pady=0)
     m12_label.grid(
-        row=1, column=2, pady=(5,25))
+        row=1, column=1, pady=(5,25))
     
     parameters_m21_text.grid(
-        row=0, column=3, padx=15, pady=0)
+        row=0, column=2, padx=15, pady=0)
     m21_label.grid(
-        row=1, column=3, pady=(5,25))
+        row=1, column=2, pady=(5,25))
     
     parameters_m34_text.grid(
-        row=0, column=4, padx=0, pady=0)
+        row=0, column=3, padx=15, pady=0)
     m34_label.grid(
-        row=1, column=4, pady=(5,25))
+        row=1, column=3, pady=(5,25))
     
     parameters_m43_text.grid(
-        row=2, column=0, padx=0, pady=0)
+        row=0, column=4, padx=0, pady=0)
     m43_label.grid(
+        row=1, column=4, pady=(5,25))
+    
+    parameters_angle_text.grid(
+        row=2, column=0, padx=0, pady=0)
+    angle_label.grid(
         row=3, column=0, pady=(5,25))
     
     parameters_t1_text.grid(
@@ -916,10 +956,18 @@ def build_input_frame():
     velocity_angle_const_frame.grid(row=1, column=0, padx=10, pady=5, sticky="w")
     oporn_signal_frame.grid(row=2, column=0, padx=10, pady=5, sticky="w")
     # oporn_signal_frame.grid_propagate(False)
+    # build_rotating_table_interface()
+    build_input_minor_frames()
+    
+
+def build_rotating_table_interface():
+    
     velocity_angle_loop_frame.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
     cur_off_frame.grid(row=4, column=0, padx=10, pady=0, sticky="w")
-
-    build_input_minor_frames()
+    
+def forget_rotating_table():
+    velocity_angle_loop_frame.grid_forget()
+    cur_off_frame.grid_forget()
 
 
 def build_input_minor_frames():

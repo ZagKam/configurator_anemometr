@@ -3,7 +3,7 @@
     "current_off_command": "0110000e0001020000",
     "current_off_answer_size": 8,
     "motor_rotation_commmand": "0106001c0001",
-    "motor_configuration_command": "0110001a00020400b20000",
+    "motor_configuration_command": "0110001a00020407e90000",
     "motor_configuration_answer_size": 8,
     "motor_rotation_answer_size": 8,
     "motor_rotation_duration": 4,
@@ -16,6 +16,7 @@
     "wind_velocity_coef_duration": 35,
     "calibration_step_number": 72,
     "poll_timeout": 980,
-    "test": false
+    "test": false,
+    "export_encoding": "ANSI"
 
 }

@@ -23,4 +23,4 @@ def get_crc(hex_string:str) -> str:
     
     
 if __name__ == '__main__':
-    print(get_crc('3C03040000000A'))
+    print(get_crc('0110001A00020400B20000'))

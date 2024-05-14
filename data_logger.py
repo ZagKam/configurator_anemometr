@@ -4,7 +4,7 @@ from date_time import time_now
 import os
 
 
-def add_line(c1: float, c2: float):
+def add_line(angle: int, c1: float, c2: float):
     """Add new line to log file
 
     :param datetime: _description_
@@ -22,7 +22,7 @@ def add_line(c1: float, c2: float):
     with open(write_path, mode) as file:
         try:
             if mode == 'w':  
-                file.write('SEP=,\nDate,  c1, c2, \n')
-            file.write(f"{time},{c1},{c2}\n")                            
+                file.write('SEP=,\nDate, angle, c1, c2, \n')
+            file.write(f"{time},{angle},{c1},{c2}\n")                            
         except Exception as e:
             print(e)

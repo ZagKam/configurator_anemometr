@@ -26,6 +26,7 @@ class Config(TypedDict):
     log_level: int
     test: bool
     poll_timeout: int
+    export_encoding: str
 
     
 def convert_to_bytes(self):

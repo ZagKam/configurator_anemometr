@@ -139,5 +139,22 @@
 # parameters_m12_text.pack()
 
 # root.mainloop()
-scaled_velocity = 0
-print(format(scaled_velocity, '02X'))
+# scaled_velocity = 0
+# print(format(scaled_velocity, '02X'))
+
+# import tkinter as tk
+
+# def button_clicked():
+#     print("Button clicked")
+
+# root = tk.Tk()
+# root.geometry("200x200")
+# root.configure(background='white')  # Установка фона
+
+# # Создание кнопки
+# invisible_button = tk.Button(root, text="Invisible Button", command=button_clicked, bg='white', bd=0, highlightthickness=0)
+# invisible_button.place(x=50, y=50)
+
+# root.mainloop()
+import sys
+print(sys.version)

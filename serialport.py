@@ -8,6 +8,34 @@ from random import random
 from config import config
 from program_logger import logger
 
+
+class SerialMock(Mock):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.command = b''
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+        
+    
+    def read(self, command:bytes, *args, **kwargs):
+        sleep(0.15)
+        if command == b'\x3C\x03\x00\x01\x00\x02\x91\x26': 
+                return b'\x3C\x03\x04\x00\x00\x00\x0A\x96\xF7'
+        
+    def write(self, command: bytes,  *args, **kwargs):
+        self.command = command
+
+    def interact(self, *args, read_size, read_timeout=0, **kwargs):
+        if self.closed:
+            raise ConnectionError()
+        if read_timeout:
+            sleep(read_timeout)
+        return  bytearray([round(random() * 255) for _ in range(read_size)])
+
+
 if config["test"]:
 
     class Serial(Mock):

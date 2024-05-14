@@ -31,8 +31,8 @@ def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> Tuple[fl
         if not raw_answer:
             return '-1'
         # ##### не проверена работоспособность кода преобразующего u16 в halffloat
-        half_float_c1 = struct.unpack('<e', raw_answer[3:5])[0]
-        half_float_c2 = struct.unpack('<e', raw_answer[5:7])[0]
+        half_float_c1 = struct.unpack('>e', raw_answer[3:5])[0]
+        half_float_c2 = struct.unpack('>e', raw_answer[5:7])[0]
         # ####
         list_answer = [round(half_float_c1, 3), round(half_float_c2, 3)]
         return list_answer
