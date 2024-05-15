@@ -23,7 +23,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Configurator_Anemometr_UZ_V005',
+    name='Configurator_Anemometr_UZ_V006',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

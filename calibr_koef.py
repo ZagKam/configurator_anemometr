@@ -39,7 +39,7 @@ def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> Tuple[fl
     
     except Exception as e:
         print(e) 
-        return 0, 0
+        return -1, -1
         
     
 

@@ -101,7 +101,7 @@ class CalibrationStatusWindow:
                   padding=5,
                   amountused=0,
                   metertype="full",
-                  subtext="Угол обработан")
+                  subtext="Угол обрабатывается")
         self.meter.pack()
         self.table = CurParamTable(
             self.window, 
@@ -372,7 +372,7 @@ def start_compolling():
         messagebox.showerror("Ошибка подключения", e)
         return
     PORTS["port_uz"] = port_uz
-    PORTS["port_js"] = port_js
+    PORTS["port_js"] = port_js 
     initial_calibration(port_js)
     display_version(get_version_call())
     start_uz_polling()
@@ -545,7 +545,7 @@ def ui_update(wind_velocity: int, angle: int, c1, c2):
         values=[datetime.now(), angle, c1, c2]
     )
     root.after(10, calibration_status.table.goto_last_page)
-    calibration_status.meter.amountusedvar.set(angle)
+    calibration_status.meter.amountusedvar.set(angle+5)
     current_angle.set(f"{wind_velocity}м/c,  {angle}"+b'\xc2\xb0'.decode("utf8") )
 
 
@@ -580,7 +580,7 @@ def loader_curr(end_event):
 # Создание главного окна
 
 root = ttk.Window(themename="darkly")
-root.title("Конфигуратор Анемометр УЗ v.0.0.5")
+root.title("Конфигуратор Анемометр УЗ v.0.0.6")
 style = ttk.Style()
 style.configure("PlaceholderEntry.TEntry", foreground="grey")
 style.configure("DebugFrame.TFrame", background="green")
