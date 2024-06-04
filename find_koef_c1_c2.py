@@ -5,7 +5,7 @@ from typing import Iterable, Union, Tuple
 
 from config import config
 
-def calibration_koef(ComPort:serial.Serial, velocity:str, angle:str) -> Tuple[float, float]:
+def find_koef(ComPort:serial.Serial, velocity:str, angle:str) -> Tuple[float, float]:
     
     """
     Функция для установки параметра sens для выбранного газа.

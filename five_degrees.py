@@ -31,7 +31,7 @@ def rotation_five_degree(ComPort: Serial) -> bool:
         return False
     logger.debug(f"Motor has rotated {answer=}")
     return True
-
+    # "motor_position": "0103001E0002A40D", - команда для обнаружения позиции
 
 def initial_calibration(port: Serial):
     """Make initial calibration for motor

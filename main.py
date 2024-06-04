@@ -41,11 +41,14 @@ from serialport import Serial, SerialMock
 from all_parameters import all_params
 from set_m_b_get_b import set_m
 from calibr_koef import calibration_koef
+from find_koef_c1_c2 import find_koef
 from oporn_signal import entry_oporn_signal, READ_TIMEOUT as oporn_read_timeout
 from calibration_loop import calibration_loop
 from five_degrees import initial_calibration
 from current_off import current_off
 from program_logger import logger
+from velocity_direct_wind import wind_vel_direct
+
 
 
 stop_thread = True
@@ -435,6 +438,9 @@ def _find_c1_c2():
         messagebox.showwarning("Ошибка ввода", "Введена некорректная скорость")
         return
     logger.debug(f"Function was called with {angle=} {velocity=}")
+    write = wind_vel_direct(PORTS["port_uz"], str(entry_velocity_const.get()), 
+                                              str(entry_angle_const.get()))
+    logger.info("wind_vel_direct is work")
     value = calibration_koef(PORTS["port_uz"], entry_velocity_const.get(), entry_angle_const.get())
     if value == -1:
         logger.info("UZ didn't respond")
@@ -447,6 +453,29 @@ def _find_c1_c2():
 def find_c1_c2():
     Thread(target=_find_c1_c2, daemon=True).start()
     
+
+def _only_find_c1_c2():
+    angle = find_entry_angle_const.get().strip()
+    velocity = find_entry_velocity_const.get()
+    if not angle.isdigit() or int(angle) > 359:
+        messagebox.showwarning("Ошибка ввода", "Введен некорректный угол")
+        return
+    if not velocity.isdigit():
+        messagebox.showwarning("Ошибка ввода", "Введена некорректная скорость")
+        return
+    logger.debug(f"Function was called with {angle=} {velocity=}")
+    value = find_koef(PORTS["port_uz"], find_entry_velocity_const.get(), 
+                                                find_entry_angle_const.get())
+    if value == -1:
+        logger.info("UZ didn't respond")
+        messagebox.showwarning("Неверный ответ", "Прибор не ответил")
+    logger.debug(f"New {value=} was set")   
+    find_output_c1_c2_text.delete("1.0", "end")
+    find_output_c1_c2_text.insert("1.0", (str(value[0]) +','+ str(value[1])))
+    
+
+def only_find_c1_c2():
+    Thread(target=_only_find_c1_c2, daemon=True).start()
 
 def _write_oporn_sign(end_event: Event):
     entry_oporn_signal(PORTS["port_uz"])
@@ -522,12 +551,11 @@ def _start_calibration_cycle():
     try:
         root.after(10, create_staus_window)
         wind_velocity = int(wind_velocity)
-        PORTS["port_uz"].enter_calibration()
         initial_calibration(PORTS["port_js"])
         calibration_loop(ui_update, 
                         wind_velocity, PORTS["port_uz"],
-                        PORTS["port_js"])
-        PORTS["port_uz"].exit_calibration()
+                        PORTS["port_js"],
+                        IS_CALIBRATION)
         status.set("Калибровка завершена")
         messagebox.showinfo("Информация", "Цикл калибровки завершён")
     except Exception as e:
@@ -575,12 +603,10 @@ def loader_curr(end_event):
                 return
             end_write_curr_off_var.set('Отключение тока ' + i)
 
-
-
 # Создание главного окна
 
 root = ttk.Window(themename="darkly")
-root.title("Конфигуратор Анемометр УЗ v.0.0.6")
+root.title("Конфигуратор Анемометр УЗ v.0.0.9")
 style = ttk.Style()
 style.configure("PlaceholderEntry.TEntry", foreground="grey")
 style.configure("DebugFrame.TFrame", background="green")
@@ -615,8 +641,11 @@ entry_b_m_frame = ttk.Frame(input_frame)
 velocity_angle_loop_frame = ttk.Frame(input_frame)
 
 
-# Создаем рамку для записи определенного угла и скорости
+# Создаем рамку для ЗАПИСИ определенного угла и скорости
 velocity_angle_const_frame = ttk.Frame(input_frame)
+
+# Создаем рамку для НАХОЖДЕНИЯ определенного угла и скорости
+find_vel_angle_const_frame = ttk.Frame(input_frame)
 
 # Создаем рамку для записи опорных сигналов
 oporn_signal_frame = ttk.Frame(input_frame, 
@@ -646,6 +675,8 @@ velocity_angle_loop_title_label = ttk.Label(velocity_angle_loop_frame)
 # Создаем метку для надписи над окном вывода
 velocity_angle_const_title_label = ttk.Label(velocity_angle_const_frame)
 
+# Создаем метку для надписи над окном вывода
+find_vel_angle_const_title_label = ttk.Label(find_vel_angle_const_frame)
 
 # Создаем метку для надписи над окном вывода
 oporn_signal_title_label = ttk.Label(oporn_signal_frame)
@@ -809,7 +840,7 @@ velocity_angle_loop_info = ttk.Label(velocity_angle_loop_frame,
 ##################################
 
 # Кнопка для определения значений определенной скороти и угла
-velocity_angle_const_button = InputFrameButton(velocity_angle_const_frame, text="Найти с1,с2", command=find_c1_c2)
+velocity_angle_const_button = InputFrameButton(velocity_angle_const_frame, text="Запись с1,с2", command=find_c1_c2)
 
 
 # Создание поля ввода скорости для определения одного значения
@@ -831,6 +862,23 @@ output_c1_c2_text.configure(width=15, height=1)
 # tooltip_label.config(font=("Helvetica", "8"))
 # create_tooltip(output_c1_c2_text, "Отображение параметров с1, с2")
 
+#################################
+
+# Кнопка для определения значений определенной скороти и угла
+find_vel_angle_const_button = InputFrameButton(find_vel_angle_const_frame, text="Найти с1,с2", command=only_find_c1_c2)
+
+# Создание поля ввода скорости для определения одного значения
+default_text = 'Введите скорость'
+find_entry_velocity_const = EntryWithPlaceholder(find_vel_angle_const_frame, placeholder=default_text)
+
+
+# Создание поля ввода угла для определения одного значения
+default_text = 'Введите угол'
+find_entry_angle_const = EntryWithPlaceholder(find_vel_angle_const_frame, placeholder=default_text)
+
+# окно вывода c1,c2
+find_output_c1_c2_text = ttk.Text(find_vel_angle_const_frame)
+find_output_c1_c2_text.configure(width=15, height=1)
 
 ##################################
 
@@ -954,7 +1002,8 @@ def build_parameters_frame():
 def build_input_frame():
     entry_b_m_frame.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="w")
     velocity_angle_const_frame.grid(row=1, column=0, padx=10, pady=5, sticky="w")
-    oporn_signal_frame.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    find_vel_angle_const_frame.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    oporn_signal_frame.grid(row=3, column=0, padx=10, pady=5, sticky="w")
     # oporn_signal_frame.grid_propagate(False)
     # build_rotating_table_interface()
     build_input_minor_frames()
@@ -962,8 +1011,8 @@ def build_input_frame():
 
 def build_rotating_table_interface():
     
-    velocity_angle_loop_frame.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
-    cur_off_frame.grid(row=4, column=0, padx=10, pady=0, sticky="w")
+    velocity_angle_loop_frame.grid(row=4, column=0, padx=10, pady=(10, 0), sticky="w")
+    cur_off_frame.grid(row=5, column=0, padx=10, pady=0, sticky="w")
     
 def forget_rotating_table():
     velocity_angle_loop_frame.grid_forget()
@@ -985,7 +1034,14 @@ def build_input_minor_frames():
     entry_velocity_const.grid(row=0, column=1)
     entry_angle_const.grid(row=0, column=2, padx=20, pady=1)
     output_c1_c2_text.grid(row=0, column=3, padx=(10, 0), pady=1)
+    
+    find_vel_angle_const_button.grid(row=0, column=0, padx=10, pady=1)
+    find_entry_velocity_const.grid(row=0, column=1)
+    find_entry_angle_const.grid(row=0, column=2, padx=20, pady=1)
+    find_output_c1_c2_text.grid(row=0, column=3, padx=(10, 0), pady=1)
+    
     oporn_signal_button.grid(row=0, column=0, padx=10, pady=1)
+    
     cur_off_button.grid(row=0, column=1, padx=10, pady=10)  
     # cur_off_info.grid(row=0, column=2, padx=10, pady=10)
 
@@ -1008,6 +1064,7 @@ NAME_PARAM = [parameters_vel_text,
               parameters_t4_text]
 ALL_BUTTONS = [button_open_port,button_close_port,
                input_m_b_button,velocity_angle_loop_button,
-               velocity_angle_const_button,oporn_signal_button,
+               velocity_angle_const_button,find_vel_angle_const_button,
+               oporn_signal_button,
                cur_off_button]
 root.mainloop()

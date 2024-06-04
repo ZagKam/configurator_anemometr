@@ -22,6 +22,7 @@ class Config(TypedDict):
     oporn_signal_set_answer_size: int
     wind_velocity_coef_duration: int
     calibration_koef_answer_size: int
+    find_koef_answer_size: int
     calibration_step_number: int
     log_level: int
     test: bool
